@@ -7,6 +7,31 @@ test_metrics (test_paco.PacoTests.test_metrics) ... ok
 test_refusal (test_paco.PacoTests.test_refusal) ... ok
 test_seed (test_paco.PacoTests.test_seed) ... ok
 test_tracking (test_paco.PacoTests.test_tracking) ... ok
+test_audit (test_resolution.ResolutionTests.test_audit) ... ok
+test_chat_triage (test_resolution.ResolutionTests.test_chat_triage) ... ok
+test_duplicate_across_stages (test_resolution.ResolutionTests.test_duplicate_across_stages) ... ok
+test_invalid_codes (test_resolution.ResolutionTests.test_invalid_codes) ... ok
+test_lost_cargo (test_resolution.ResolutionTests.test_lost_cargo) ... ok
+test_migration (test_resolution.ResolutionTests.test_migration) ... ok
+test_no_premature_close (test_resolution.ResolutionTests.test_no_premature_close) ... ok
+test_original_and_new_eta (test_resolution.ResolutionTests.test_original_and_new_eta) ... ok
+test_photo_upload (test_resolution.ResolutionTests.test_photo_upload) ... ok
+test_plan_grounded (test_resolution.ResolutionTests.test_plan_grounded) ... ok
+test_prevention_dedupe (test_resolution.ResolutionTests.test_prevention_dedupe) ... ok
+test_priorities (test_resolution.ResolutionTests.test_priorities) ... ok
+test_reopen (test_resolution.ResolutionTests.test_reopen) ... ok
+test_reschedule (test_resolution.ResolutionTests.test_reschedule) ... ok
+test_reschedule_chat_memory_and_confirm (test_resolution.ResolutionTests.test_reschedule_chat_memory_and_confirm) ... ok
+test_satisfaction_validation (test_resolution.ResolutionTests.test_satisfaction_validation) ... ok
+test_sla_escalation (test_resolution.ResolutionTests.test_sla_escalation) ... ok
+test_workflow (test_resolution.ResolutionTests.test_workflow) ... ok
+test_wrong_cargo (test_resolution.ResolutionTests.test_wrong_cargo) ... ok
+test_ai_invalid_before_api (test_tracking_feedback.TrackingFeedbackTests.test_ai_invalid_before_api) ... ok
+test_demo_invalid_memory (test_tracking_feedback.TrackingFeedbackTests.test_demo_invalid_memory) ... ok
+test_formats (test_tracking_feedback.TrackingFeedbackTests.test_formats) ... ok
+test_new_cargo (test_tracking_feedback.TrackingFeedbackTests.test_new_cargo) ... ok
+test_nontracking (test_tracking_feedback.TrackingFeedbackTests.test_nontracking) ... ok
+test_valid_and_followup (test_tracking_feedback.TrackingFeedbackTests.test_valid_and_followup) ... ok
 test_cargo_create_update (test_v2.V2Tests.test_cargo_create_update) ... ok
 test_fleet (test_v2.V2Tests.test_fleet) ... ok
 test_late_preserved (test_v2.V2Tests.test_late_preserved) ... ok
@@ -22,6 +47,6 @@ test_refuse (test_v2.V2Tests.test_refuse) ... ok
 test_seed_and_migration (test_v2.V2Tests.test_seed_and_migration) ... ok
 
 ----------------------------------------------------------------------
-Ran 22 tests in 0.616s
+Ran 47 tests in 1.806s
 
 OK

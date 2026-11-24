@@ -3,9 +3,12 @@ from datetime import timedelta
 import pandas as pd
 import streamlit as st
 from core import today, describe
+from tracking_feedback import tracking_result
 from operations import Operations, CITIES, STATUS, KINDS, quote, quote_text, money, demo_extended
 from paco import reply, confirm
 from reports import report
+from resolution import ResolutionStore, complaint_reply
+from support_ui import customer_support, manager_cases, intelligence
 
 st.set_page_config(page_title='Paixão Connect | PACO',page_icon='🚚',layout='wide',initial_sidebar_state='collapsed')
 def setting(name,default=''):
@@ -33,18 +36,68 @@ button[kind="primary"],button[kind="primaryFormSubmit"]{background:#f5a623!impor
 button[kind="primary"] p,button[kind="primaryFormSubmit"] p{color:#102b43!important;}
 .stButton button,.stFormSubmitButton button,.stDownloadButton button{border-radius:12px;min-height:44px;}
 .st-key-navbox{padding:4px 8px;border-bottom:1px solid rgba(128,150,170,.28);}
-.st-key-navbox [role="radiogroup"]{display:flex;justify-content:space-around;gap:5px;flex-wrap:nowrap;}
-.st-key-navbox [role="radiogroup"] label{flex:1;justify-content:center;min-width:0;}
-.st-key-navbox [role="radiogroup"] label>div:first-child{display:none;}
-.st-key-navbox [role="radiogroup"] label:has(input:checked){background:#f5a623;color:#102b43;border-radius:10px;}
-.st-key-navbox [role="radiogroup"] label:has(input:checked) p{color:#102b43!important;font-weight:800;}
-.st-key-navbox [role="radiogroup"] label:focus-within{outline:2px solid #b76b09;outline-offset:2px;}
 .routecard{border:1px solid rgba(128,150,170,.35);border-radius:14px;padding:16px;}.routecard h3{margin:0;}.routecard .eyebrow{font-size:.72rem;letter-spacing:.1em;font-weight:750;opacity:.8;}
 .event{border-left:3px solid #e6a03c;padding:0 0 14px 16px;margin-left:8px;overflow-wrap:anywhere;}.event span{font-size:.78rem;opacity:.8;}.event b{display:block;}
 @media (prefers-color-scheme:dark){.brand-tag{color:#c27a25;}}
 @media (max-width:700px){.block-container{padding:3rem 1rem calc(6.6rem + env(safe-area-inset-bottom));}.hero{padding:22px 17px;border-radius:17px;}.hero h1{font-size:1.85rem;}.hero small{font-size:.66rem;}.hero p{font-size:.9rem;}.brand-name{font-size:1.15rem;}
 .st-key-navbox{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#102b43;color:#fff;padding:9px 7px calc(9px + env(safe-area-inset-bottom));box-shadow:0 -4px 20px #102b4325;}.st-key-navbox [role="radiogroup"]{gap:2px!important;}.st-key-navbox [role="radiogroup"] label{padding:10px 2px;margin:0;min-height:44px;}.st-key-navbox [role="radiogroup"] label p{color:white!important;font-size:.72rem!important;text-align:center;white-space:normal;}.st-key-navbox [role="radiogroup"] label:has(input:checked) p{color:#102b43!important;}
 [data-testid="stHorizontalBlock"]{flex-wrap:wrap!important;gap:.65rem!important;}[data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{flex:1 1 100%!important;width:100%!important;min-width:0!important;}.st-key-metrics [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{flex:1 1 44%!important;width:44%!important;}[data-testid="stMetric"]{padding:12px;}[data-testid="stChatMessage"]{padding:9px;}}
+/* Visual 2.1: compact service grid and genuine navigation buttons. */
+:root{--pc-bg:#f3f6fb;--pc-text:#102b43;--pc-muted:#52677c;--pc-line:#dbe4ee;}
+.stApp,[data-testid="stAppViewContainer"],[data-testid="stMain"]{background:var(--pc-bg)!important;color:var(--pc-text)!important;color-scheme:light;}
+.block-container{max-width:1080px;padding:1.5rem 2rem 3rem;}
+[data-testid="stHeader"]{background:transparent!important;height:0;min-height:0;}
+[data-testid="stToolbar"],[data-testid="stDecoration"],[data-testid="stAppDeployButton"],#MainMenu,footer{display:none!important;}
+.stApp h1,.stApp h2,.stApp h3,.stApp label,.stApp [data-testid="stMarkdownContainer"]{color:var(--pc-text);}
+.stApp [data-testid="stCaptionContainer"],.stApp [data-testid="stCaptionContainer"] p{color:var(--pc-muted)!important;}
+.stApp input:not([type="checkbox"]):not([type="radio"]),.stApp textarea{color:var(--pc-text)!important;background:white!important;caret-color:var(--pc-text);}
+.stApp [data-testid="stWidgetLabel"] p,.stApp [data-testid="stMetricLabel"] p,.stApp [data-testid="stMetricValue"]{color:#102b43!important;}
+.stApp input::placeholder,.stApp textarea::placeholder{color:#64748b!important;opacity:1;}
+.stApp [data-baseweb="input"],.stApp [data-baseweb="base-input"],.stApp [data-baseweb="textarea"],.stApp [data-baseweb="select"]>div{background:#fff!important;color:var(--pc-text)!important;border-color:var(--pc-line)!important;}
+.stApp [data-testid="stForm"]{border-color:var(--pc-line);}
+.brand{margin:0 0 4px;color:var(--pc-text);}.brand-name{font-size:1.2rem;}.brand-tag{color:#95500a!important;font-size:.62rem;}
+.hero{background:linear-gradient(120deg,#102b43,#194568);padding:28px 26px;border-radius:22px;border-bottom:0;box-shadow:0 10px 22px #102b431a;isolation:isolate;}.hero:after{display:none;}
+.hero-copy{position:relative;z-index:2;max-width:65%;}.hero small{color:#ffce84;font-size:.69rem;}.hero h1{color:#fff!important;font-size:clamp(1.8rem,4vw,2.8rem);line-height:1.05;margin:9px 0 10px!important;padding:0!important;letter-spacing:-.045em;}.hero p{color:#e1ebf7!important;font-size:.9rem;line-height:1.45;margin:0!important;}.hero-art{position:absolute;right:8px;bottom:6px;width:35%;max-width:310px;height:auto;z-index:1;pointer-events:none;}
+button[kind="secondary"],button[kind="secondaryFormSubmit"]{background:#fff!important;color:#102b43!important;border:1px solid #dbe4ee!important;}button[kind="secondary"] p,button[kind="secondaryFormSubmit"] p{color:#102b43!important;}
+button:focus-visible{outline:2px solid #b45309!important;outline-offset:2px;}
+.st-key-navbox{background:#fff;border:1px solid var(--pc-line);border-radius:15px;padding:6px 8px;box-shadow:0 3px 12px #102b4308;}
+.st-key-navbox [data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px!important;align-items:stretch;}
+.st-key-navbox [data-testid="stColumn"]{width:100%!important;min-width:0!important;flex:none!important;}
+.st-key-navbox .stButton button{width:100%;min-width:0!important;padding:8px 2px!important;border:0!important;box-shadow:none!important;min-height:46px;}
+.st-key-navbox button[kind="secondary"],.st-key-navbox button[kind="secondary"] p{color:#52677c!important;background:transparent!important;}
+.st-key-navbox button[kind="primary"]{background:#fff1d8!important;}.st-key-navbox button[kind="primary"],.st-key-navbox button[kind="primary"] p{color:#8a4400!important;}.st-key-navbox button p{font-size:.88rem;white-space:nowrap!important;margin:0!important;}
+.st-key-home_trackbox{background:#fff;border:1px solid var(--pc-line);border-radius:18px;padding:15px 18px;box-shadow:0 4px 14px #102b4308;}.st-key-home_trackbox [data-testid="stForm"]{border:0!important;padding:0!important;}
+.section-heading{font-size:1.13rem;font-weight:800;letter-spacing:-.025em;margin:3px 0 0;color:var(--pc-text);}
+.st-key-home_services [data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px!important;}.st-key-home_services [data-testid="stColumn"]{width:100%!important;min-width:0!important;flex:none!important;}
+.st-key-home_services [class*="st-key-service_"]{background:#fff;border:1px solid var(--pc-line);border-radius:16px;padding:13px;box-shadow:0 3px 12px #102b4308;}.st-key-home_services [class*="st-key-service_"] [data-testid="stVerticalBlock"]{gap:.45rem!important;}
+.service-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#fff1dc;color:#965008;margin:0 0 4px;}.service-icon svg{width:22px;height:22px;}.service-name{font-size:1rem;font-weight:800;letter-spacing:-.02em;color:#102b43;line-height:1.2;}.service-desc{font-size:.79rem;line-height:1.35;color:#52677c;min-height:2.15em;margin-top:4px;}
+.st-key-home_services .stButton button{min-height:44px;padding:5px 4px!important;}.st-key-home_services .stButton button p{font-size:.82rem;font-weight:700;}
+[data-testid="stMetric"],[data-testid="stChatMessage"],.routecard{background:#fff!important;border:1px solid var(--pc-line);color:var(--pc-text);}.event span{color:var(--pc-muted);}
+@media(max-width:700px){
+.block-container{padding:1rem 1rem calc(7.5rem + env(safe-area-inset-bottom,0px));}.brand-name{font-size:1.08rem;}.brand-tag{font-size:.55rem;letter-spacing:.04em;}.brand-mark{width:40px;height:40px;}
+.hero{padding:20px 16px;border-radius:18px;}.hero-copy{max-width:72%;}.hero h1{font-size:clamp(1.55rem,6vw,2rem);}.hero small{font-size:.58rem;}.hero p{font-size:.82rem;}.hero-art{width:33%;right:0;bottom:8px;}
+.st-key-navbox{position:fixed!important;bottom:calc(8px + env(safe-area-inset-bottom,0px));left:8px;right:8px;width:auto!important;z-index:1000;padding:5px 4px;background:#fff!important;border-radius:18px;box-shadow:0 4px 28px #102b4333;}
+.st-key-navbox [data-testid="stHorizontalBlock"]{gap:2px!important;}.st-key-navbox .stButton button{min-height:54px;display:flex!important;flex-direction:column!important;align-items:center;justify-content:center;gap:3px!important;padding:5px 0!important;}.st-key-navbox button p{font-size:clamp(.61rem,2.65vw,.75rem)!important;line-height:1.1;}.st-key-navbox button [data-testid="stIconMaterial"]{font-size:21px!important;}
+.st-key-home_services [data-testid="stHorizontalBlock"]{gap:9px!important;}.st-key-home_services [class*="st-key-service_"]{padding:10px;}.service-name{font-size:.92rem;}.service-desc{font-size:.72rem;}.service-icon{width:33px;height:33px;}.service-icon svg{width:19px;height:19px;}.st-key-home_services .stButton button p{font-size:.75rem;}.st-key-home_trackbox{padding:12px;}
+.st-key-metrics [data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));}.st-key-metrics [data-testid="stColumn"]{width:100%!important;min-width:0!important;}
+}
+@media(max-width:340px){.hero-copy{max-width:100%;}.hero-art{opacity:.16;}.st-key-home_services [class*="st-key-service_"]{padding:8px;}}
+
+/* Guided navigation 2.3 */
+.guide{background:#eaf2fa;border:1px solid #d5e4f2;border-radius:13px;padding:13px 15px;color:#183a58;margin:0 0 3px;line-height:1.45;font-size:.91rem;}.guide b{color:#102b43;}.guide small{display:block;color:#52677c;font-size:.82rem;margin-top:5px;}
+.step-title{display:flex;align-items:center;gap:9px;font-weight:750;color:#102b43;font-size:1rem;margin:8px 0 2px;}.step-title span{display:grid;place-items:center;width:25px;height:25px;background:#fff0d7;color:#8a4400;border-radius:8px;font-size:.8rem;flex-shrink:0;}
+.st-key-service_menu [data-testid="stHorizontalBlock"],.st-key-manager_menu [data-testid="stHorizontalBlock"],.st-key-protocol_menu [data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important;}
+.st-key-service_menu [data-testid="stColumn"],.st-key-manager_menu [data-testid="stColumn"],.st-key-protocol_menu [data-testid="stColumn"]{width:100%!important;min-width:0!important;flex:none!important;}
+.st-key-service_menu button,.st-key-manager_menu button,.st-key-protocol_menu button{min-height:49px;white-space:normal!important;}.st-key-service_menu button p,.st-key-manager_menu button p,.st-key-protocol_menu button p{font-size:.88rem;line-height:1.2;}
+.st-key-service_menu,.st-key-manager_menu,.st-key-protocol_menu{background:#fff;border:1px solid var(--pc-line);border-radius:15px;padding:10px;}
+.stApp [data-testid="stForm"]{background:#fff;border-radius:14px;}.stApp [data-testid="stExpander"]{background:#fff;border-radius:13px;}.stApp [data-testid="stWidgetLabel"] p{font-weight:650;}.stApp h1{font-size:clamp(1.7rem,4vw,2.4rem);letter-spacing:-.035em;}.stApp h2{font-size:1.35rem;}.stApp h3{font-size:1.12rem;}
+@media(max-width:700px){.guide{font-size:.86rem;padding:11px 12px;}.st-key-service_menu button p,.st-key-manager_menu button p,.st-key-protocol_menu button p{font-size:.78rem;}.stApp [data-testid="stForm"]{padding:12px;}.stApp h2{font-size:1.2rem;}}
+
+/* 3.0: compact help hub, consistent contrast, mobile navigation */
+.support-hero{background:linear-gradient(120deg,#102b43,#205476);border-radius:20px;padding:24px;color:#fff;box-shadow:0 6px 20px #102b4315}.support-hero h2{color:#fff!important;margin:7px 0!important;font-size:clamp(1.55rem,5vw,2rem)!important;padding:0!important}.support-hero p{color:#e3edf6!important;margin:0;font-size:.95rem}.support-hero .eyebrow{color:#ffc66f;font-size:.65rem;letter-spacing:.11em;font-weight:800}
+.st-key-home_help{background:white;border:1px solid #dbe4ee;border-left:4px solid #f5a623;border-radius:16px;padding:15px 18px;}.st-key-home_help h3{padding:0!important}.st-key-problem_cards button{justify-content:flex-start!important;text-align:left!important;min-height:48px!important;padding:9px 12px!important;white-space:normal!important}.st-key-problem_cards button p{font-size:.92rem;line-height:1.25}.st-key-problem_cards [data-testid="stVerticalBlock"]{gap:6px!important}
+.stApp [data-testid="stAlert"]{background:#eaf2fa!important;border:1px solid #d5e4f2;border-radius:12px;color:#102b43!important}.stApp [data-testid="stAlert"] p{color:#102b43!important}.stApp [data-testid="stFileUploaderDropzone"]{background:#edf3fa!important;color:#102b43!important}.stApp [data-testid="stFileUploaderDropzone"] *{color:#102b43!important}.stApp [data-testid="stText"]{white-space:pre-wrap;overflow-wrap:anywhere;color:#102b43}.stApp [data-testid="stVerticalBlockBorderWrapper"]{border-color:#dbe4ee!important}.stApp [data-testid="stExpander"] summary{color:#102b43!important}
+@media(max-width:700px){.support-hero{padding:20px 16px}.st-key-home_help{padding:12px}.st-key-metrics_complaints [data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important}.st-key-metrics_complaints [data-testid="stColumn"]{width:100%!important;min-width:0!important}.st-key-metrics_complaints [data-testid="stMetricLabel"]{white-space:normal!important}.st-key-navbox{bottom:calc(10px + env(safe-area-inset-bottom,0px))!important}.st-key-navbox .stButton button{min-height:54px!important}.block-container{padding-bottom:calc(8rem + env(safe-area-inset-bottom,0px))!important}}
 </style>''',unsafe_allow_html=True)
 if access and not s.access:
     st.title('Transportadora Paixão'); entered=st.text_input('Código de acesso à demonstração',type='password')
@@ -54,33 +107,67 @@ if access and not s.access:
     st.stop()
 if 'dbpath' not in s:
     fd,path=tempfile.mkstemp(prefix='paixao_',suffix='.sqlite3');os.close(fd);s.dbpath=path
-store=Operations(s.dbpath)
+store=ResolutionStore(s.dbpath)
+store.scan_prevention()
 BRAND='''<div class="brand"><div class="brand-mark"><svg width="33" height="28" viewBox="0 0 48 36" fill="none" aria-hidden="true"><path d="M3 5h27v22H3zM30 12h9l6 8v7H30z" fill="#f5a623"/><path d="M34 15h4l4 6h-8z" fill="#102b43"/><circle cx="12" cy="28" r="5" fill="#fff" stroke="#102b43" stroke-width="2"/><circle cx="37" cy="28" r="5" fill="#fff" stroke="#102b43" stroke-width="2"/></svg></div><div><div class="brand-name">PAIXÃO CONNECT</div><div class="brand-tag">TRANSPORTADORA • INTELIGÊNCIA LOGÍSTICA</div></div></div>'''
 st.markdown(BRAND,unsafe_allow_html=True)
-PAGES=['Início','Rastreio','PACO','Serviços','Gestão']
-with st.container(key='navbox'):
-    st.radio('Navegação',PAGES,horizontal=True,key='nav',label_visibility='collapsed',format_func=lambda p: {'Início':'⌂ Início','Rastreio':'▣ Rastreio','PACO':'✦ PACO','Serviços':'☰ Serviços','Gestão':'▥ Gestão'}[p])
-page=s.nav
-
+PAGES=['Início','Rastreio','PACO','Ajuda','Gestão']
+NAV_ICONS=['home','location_on','smart_toy','support_agent','monitoring']
 def go(p,code=None,service=None):
     s.nav=p
-    if code:s.track_code=code
+    if code:
+        s.track_code=code
+        s.notice_code=code
     if service:s.service_nav=service
+    if service=='Protocolos':
+        s.nav='Ajuda';s.protocol_task='new'
+    if p=='Ajuda' and code:s.protocol_task='new'
+    if code:s.protocol_query=(code,'')
+
+with st.container(key='navbox'):
+    for col,p,icon in zip(st.columns(5,gap='small'),PAGES,NAV_ICONS):
+        col.button(p,icon=f':material/{icon}:',key='nav_button_'+p,on_click=go,args=(p,),type='primary' if s.nav==p else 'secondary',use_container_width=True)
+page=s.nav
+# Older sessions may still hold the Services page; it remains reachable via shortcuts.
 
 def quick(label,p,code=None,service=None,primary=False):
     st.button(label,on_click=go,args=(p,code,service),use_container_width=True,type='primary' if primary else 'secondary')
 def escape(t):return html.escape(str(t))
 def flash(text):s.flash=text;st.rerun()
+def guide(title,text,example=None):
+    extra=f'<small>{escape(example)}</small>' if example else ''
+    st.markdown(f'<div class="guide"><b>{escape(title)}</b> · {escape(text)}{extra}</div>',unsafe_allow_html=True)
+def step(number,title):
+    st.markdown(f'<div class="step-title"><span>{number}</span>{escape(title)}</div>',unsafe_allow_html=True)
+def choose(key,items,container):
+    # Persist selection independently of widget lifecycle when changing pages.
+    if s.get(key) not in [i[0] for i in items]:s[key]=items[0][0]
+    def select(value):s[key]=value
+    with st.container(key=container):
+        for i in range(0,len(items),2):
+            cols=st.columns(2,gap='small')
+            for col,(value,label,icon) in zip(cols,items[i:i+2]):
+                col.button(label,icon=f':material/{icon}:',key=f'{container}_{i}_{value}',on_click=select,args=(value,),type='primary' if s[key]==value else 'secondary',use_container_width=True)
+    return s[key]
 if s.get('flash'):st.success(s.pop('flash'))
 
+def customer_cargo(code):
+    d, heading, message=tracking_result(store,code)
+    if not d:
+        st.warning(f'**{heading}**\n\n{message}',icon=':material/info:')
+        st.button('Falar com PACO',on_click=go,args=('PACO',),key='tracking_help',use_container_width=True)
+    return d
+
 def track(code):
-    d=store.get(code)
-    if not d:st.error('Código não encontrado. Experimente PP1002.');return
+    d=customer_cargo(code)
+    if not d:return
+    code=d['code']
     st.markdown(f'<div class="routecard"><div class="eyebrow">{escape(d["code"])} · {escape(d["status"])}</div><h3>{escape(d["origin"])} → {escape(d["destination"])}</h3><div>Último registro: <b>{escape(d["location"])}</b></div></div>',unsafe_allow_html=True)
-    a,b=st.columns(2);a.metric('Prazo original',pd.Timestamp(d['eta']).strftime('%d/%m/%Y'));b.metric('Dias de atraso',d['days_late'])
-    if d['status']=='Atrasada':st.warning(d['reason']+' · Nova previsão não confirmada.')
-    progress={'Aguardando coleta':.15,'Em trânsito':.5,'Saiu para entrega':.85,'Entregue':1.,'Atrasada':.5}[d['status']];st.progress(progress,text='Etapa operacional ilustrativa (não é percentual de distância)')
-    st.subheader('Mapa da entrega')
+    a,b=st.columns(2);a.metric('Prazo original',pd.Timestamp(d['eta']).strftime('%d/%m/%Y'));b.metric('Atraso (prazo original)',d['days_late'])
+    if d['status']=='Atrasada':st.warning('Sentimos muito pelo atraso. Motivo registrado: '+d['reason']+'. '+('Nova previsão confirmada: '+d['confirmed_eta'] if d.get('confirmed_eta') else 'Ainda não temos uma nova previsão confirmada.'))
+    elif d.get('confirmed_eta'):st.info('Nova previsão confirmada: '+d['confirmed_eta'])
+    progress={'Aguardando coleta':.15,'Em trânsito':.5,'Saiu para entrega':.85,'Entregue':1.,'Atrasada':.5}[d['status']];st.progress(progress,text='Etapa atual: '+d['status']);st.caption('A barra representa etapas da entrega, não a distância percorrida.')
+    st.subheader('1. Onde a carga está');st.caption('O mapa mostra a origem, o destino e a última cidade registrada.')
     import pydeck as pdk
     pts=[]
     for label,cityname,color in [('Origem',d['origin'],[27,96,140]),('Destino',d['destination'],[36,151,104]),('Último registro',d['location'],[245,166,35])]:
@@ -92,54 +179,74 @@ def track(code):
         spread=max(max(p['lon'] for p in pts)-min(p['lon'] for p in pts),max(p['lat'] for p in pts)-min(p['lat'] for p in pts)); view=pdk.ViewState(longitude=sum(p['lon'] for p in pts)/len(pts),latitude=sum(p['lat'] for p in pts)/len(pts),zoom=8 if spread<.5 else 6 if spread<3 else 4.8)
         st.pydeck_chart(pdk.Deck(layers=layers,initial_view_state=view,map_style='https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',tooltip={'text':'{label}: {city}'}),use_container_width=True,height=310)
     st.caption('Posições aproximadas de cidades, rota esquemática em linhas retas; não é GPS nem trajeto rodoviário. Mapa base depende de conexão.')
-    st.subheader('Linha do tempo')
+    st.subheader('2. Por onde a carga passou');st.caption('Acompanhe as movimentações registradas na ordem exibida abaixo.')
     for r in store.history(code):st.markdown(f'<div class="event"><span>{escape(r["timestamp"].replace("T"," "))}</span><b>{escape(r["event"])}</b></div>',unsafe_allow_html=True)
+    st.subheader('3. O que você pode fazer agora')
+    quick('Resolver um problema com esta entrega','Ajuda',d['code'],primary=True)
     if d['status']=='Entregue':quick('Avaliar entrega','Serviços',d['code'],'Avaliação')
     quick('Consultar notificações','Serviços',d['code'],'Notificações')
 
 def answer(text):
     s.pending=None;start=time.monotonic();mode='Regras';s.ai_error=False
-    if key:
+    prepared=complaint_reply(text,store,s.context)
+    if prepared is not None:
+        msg,pending,resolved=prepared;mode='Triagem PACO'
+    elif key:
         try:msg,pending,resolved=reply(text,store,s.context,s.messages,key,model);mode='IA / ferramentas'
         except Exception:msg,pending,resolved=demo_extended(text,store,s.context);s.ai_error=True;mode='Contingência'
     else:msg,pending,resolved=demo_extended(text,store,s.context)
-    store.log(mode,resolved,time.monotonic()-start);s.messages.extend([{'role':'user','content':text},{'role':'assistant','content':msg}]);s.pending=pending
+    store.log(mode,resolved,time.monotonic()-start);store.audit('PACO','Interpretar e consultar',s.context.get('code',''),('Ação preparada: '+str(pending.get('kind') or pending.get('action')) if pending else 'Consulta concluída' if resolved else 'Orientação ou recusa')+' · '+mode);s.messages.extend([{'role':'user','content':text},{'role':'assistant','content':msg}]);s.pending=pending
+
+SERVICE_ICONS={
+    'paco':'<rect x="4" y="6" width="16" height="13" rx="4"/><path d="M12 2v4M9 13h.01M15 13h.01M9 16h6M2 11v4M22 11v4"/>',
+    'frete':'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8 7h8M9 12h.01M15 12h.01M9 16h.01M15 16h.01"/>',
+    'protocolos':'<rect x="5" y="5" width="14" height="16" rx="2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/>',
+    'notificacoes':'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>'}
+def service_card(key,title,description,button,page,service=None,primary=False):
+    with st.container(key='service_'+key):
+        st.markdown(f'<div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{SERVICE_ICONS[key]}</svg></div><div class="service-name">{escape(title)}</div><div class="service-desc">{escape(description)}</div>',unsafe_allow_html=True)
+        quick(button,page,service=service,primary=primary)
 
 if page=='Início':
-    st.markdown('''<div class="hero"><small>LOGÍSTICA MAIS INTELIGENTE</small><h1>Sua entrega.<br>Nosso compromisso.</h1><p>Rastreie mercadorias, simule fretes e conte com o PACO para resolver imprevistos.</p><div class="tag">PAIXÃO CONNECT 2.0 · DEMONSTRAÇÃO</div></div>''',unsafe_allow_html=True)
-    with st.form('home_track'):
-        c=st.text_input('Acompanhe sua carga',placeholder='Ex.: PP1002');submitted=st.form_submit_button('Rastrear minha entrega',type='primary',use_container_width=True)
-    if submitted:s.home_result=c
-    if s.get('home_result'):
-        d=store.get(s.home_result)
-        if d:st.markdown(describe(d));quick('Ver mapa e histórico','Rastreio',d['code'])
-        else:st.error('Código não encontrado.')
-    st.subheader('Como podemos ajudar?')
-    a,b=st.columns(2)
-    with a:
-        with st.container(border=True):st.markdown('**✦ Fale com PACO**');st.caption('Seu assistente de cargas e operações.');quick('Abrir atendimento','PACO',primary=True)
-        with st.container(border=True):st.markdown('**▣ Simular frete**');st.caption('Calcule uma estimativa em segundos.');quick('Calcular frete','Serviços',service='Frete')
-    with b:
-        with st.container(border=True):st.markdown('**◷ Central de protocolos**');st.caption('Acompanhe suas solicitações.');quick('Consultar protocolo','Serviços',service='Protocolos')
-        with st.container(border=True):st.markdown('**● Notificações**');st.caption('Veja os últimos avisos da sua carga.');quick('Ver notificações','Serviços',service='Notificações')
-    st.caption('Experimente PP1002 (em trânsito), PP1003 (atrasada) ou PP1001 (entregue).')
+    st.markdown('''<div class="hero"><div class="hero-copy"><small>TRANSPORTE &amp; TECNOLOGIA</small><h1>Sua entrega.<br>Nossa prioridade.</h1><p>Acompanhe sua carga. Se algo não sair como esperado, vamos ajudar você a resolver.</p></div><svg class="hero-art" viewBox="0 0 230 165" fill="none" aria-hidden="true"><circle cx="130" cy="79" r="74" fill="#ffffff" opacity=".07"/><circle cx="130" cy="79" r="55" stroke="#fff" opacity=".14" stroke-width="2" stroke-dasharray="5 7"/><path d="M10 135h214" stroke="#8fb5d4" stroke-opacity=".5" stroke-width="2" stroke-dasharray="8 7"/><path d="M19 52h21M7 67h30M24 82h13" stroke="#ffce84" stroke-width="3" stroke-linecap="round" opacity=".75"/><rect x="46" y="40" width="101" height="77" rx="8" fill="#edf4fc"/><path d="M148 62h27l29 29v26h-56z" fill="#f5a623"/><path d="M158 71h15l20 21h-35z" fill="#183d5d"/><path d="M45 119h160" stroke="#0d2338" stroke-width="7" stroke-linecap="round"/><circle cx="74" cy="122" r="16" fill="#102b43" stroke="#a4bdd4" stroke-width="2"/><circle cx="74" cy="122" r="6" fill="#dceaf4"/><circle cx="177" cy="122" r="16" fill="#102b43" stroke="#a4bdd4" stroke-width="2"/><circle cx="177" cy="122" r="6" fill="#dceaf4"/><path d="M70 67h51M70 76h34" stroke="#102b43" stroke-width="4" stroke-linecap="round"/><path d="M70 88h24" stroke="#d7800d" stroke-width="4" stroke-linecap="round"/></svg></div>''',unsafe_allow_html=True)
+    with st.container(key='home_trackbox'):
+        with st.form('home_track'):
+            c=st.text_input('Acompanhe sua carga',placeholder='Ex.: PP1002');submitted=st.form_submit_button('Rastrear minha entrega',type='primary',use_container_width=True)
+        if submitted:s.home_result=c
+        if 'home_result' in s:
+            d=customer_cargo(s.home_result)
+            if d:st.markdown(describe(d));quick('Ver mapa e histórico','Rastreio',d['code'])
+    with st.container(key='home_help'):
+        st.markdown('### Algo não saiu como esperado?')
+        st.caption('Atraso, avaria ou mercadoria não recebida? Abra um chamado e acompanhe a solução.')
+        quick('Resolver um problema','Ajuda',service='Protocolos',primary=True)
+        st.button('Acompanhar meu chamado',key='home_lookup',on_click=lambda: (setattr(s,'nav','Ajuda'),setattr(s,'protocol_task','lookup')),use_container_width=True)
+    st.markdown('<div class="section-heading">Outros serviços</div>',unsafe_allow_html=True)
+    with st.container(key='home_services'):
+        a,b=st.columns(2,gap='small')
+        with a:service_card('paco','Fale com PACO','Assistente de logística.','Conversar','PACO',primary=True)
+        with b:service_card('frete','Simular frete','Estime seu transporte.','Calcular','Serviços','Frete')
+        a,b=st.columns(2,gap='small')
+        with a:service_card('protocolos','Todos os serviços','Frete, avisos e avaliações.','Ver serviços','Serviços','Avaliação')
+        with b:service_card('notificacoes','Avisos da entrega','Veja mudanças e novidades.','Ver avisos','Serviços','Notificações')
+    st.caption('Ambiente acadêmico · Experimente PP1002, PP1003 ou PP1001.')
 elif page=='Rastreio':
-    st.title('Acompanhe sua entrega');st.caption('Consulta individual de cargas fictícias.')
+    st.title('Onde está minha carga?');guide('Como consultar','Digite o código da sua entrega para ver a localização, o prazo e o histórico.','Para testar: PP1002 em trânsito, PP1003 atrasada, PP1001 entregue.')
     with st.form('track'):
         c=st.text_input('Código de rastreio',value=s.track_code);submitted=st.form_submit_button('Consultar',type='primary',use_container_width=True)
     if submitted:s.track_code=c
     track(s.track_code)
 elif page=='PACO':
-    st.title('✦ PACO');st.caption('Paixão Assistente de Cargas e Operações · '+('IA configurada' if key else 'Modo demonstração por regras (sem LLM)'))
+    st.title('Converse com o PACO');guide('Como usar','Escreva como se estivesse falando com um atendente. Informe o código da carga quando necessário.','Exemplo: Onde está minha carga PP1002?');st.caption('Paixão Assistente de Cargas e Operações · '+('IA configurada' if key else 'Modo demonstração por regras (sem LLM)'))
     if s.ai_error:st.warning('A API falhou na última solicitação. Utilizei o modo por regras.')
-    with st.expander('Exemplos e segurança',expanded=not s.messages):
+    with st.expander('Experimente uma pergunta pronta',expanded=not s.messages):
         for i,(label,txt) in enumerate([('Rastrear PP1002','Onde está minha carga PP1002?'),('Resolver atraso PP1003','Minha carga PP1003 está atrasada. Registre uma ocorrência.'),('Simular frete','Frete Fortaleza para Sobral 20 kg 50x40x30'),('Consultar protocolos','Quais os protocolos da PP1003?'),('Testar privacidade','Quero o CPF dos outros clientes.')]):
             if st.button(label,key=f'example{i}',use_container_width=True):
                 with st.spinner('PACO consultando…'):answer(txt)
                 st.rerun()
         st.caption('Não informe dados pessoais. Registros dependem de confirmação. Nenhum contato externo é enviado.')
         if st.button('Limpar conversa'):s.messages=[];s.context={};s.pending=None;st.rerun()
-    with st.chat_message('assistant',avatar='🚚'):st.markdown('Olá! Sou o **PACO**. Posso rastrear entregas, calcular fretes, consultar protocolos e preparar solicitações.')
+    with st.chat_message('assistant',avatar='🚚'):st.markdown('Olá! Sou o **PACO**. Se sua entrega está atrasada, chegou danificada ou não foi recebida, posso consultar a situação e preparar um chamado. Também calculo fretes e consulto protocolos.')
     for m in s.messages:
         with st.chat_message(m['role'],avatar='🚚' if m['role']=='assistant' else '👤'):st.markdown(m['content'])
     if s.pending:
@@ -148,7 +255,11 @@ elif page=='PACO':
         st.info('Ação preparada (ainda não registrada): '+desc)
         a,b=st.columns(2)
         if a.button('Confirmar registro',type='primary',use_container_width=True):
-            try:s.messages.append({'role':'assistant','content':confirm(store,p)});s.pending=None;st.rerun()
+            try:
+                if p.get('kind'):
+                    tid,new=store.ticket(p['code'],p['kind'],'Solicitação confirmada pelo PACO.',p.get('requested_date',''),actor='PACO');msg=('Recebemos sua solicitação! Protocolo ' if new else 'Já existe uma solicitação ativa: ')+tid+'. Acompanhe na Central de ajuda.';s.protocol_query=(p['code'],tid);s.protocol_task='lookup'
+                else:msg=confirm(store,p);store.audit('PACO','Registro confirmado',p.get('code',''),p.get('action',''))
+                s.messages.append({'role':'assistant','content':msg});s.pending=None;st.rerun()
             except ValueError as e:st.error(str(e))
         if b.button('Cancelar',use_container_width=True):s.pending=None;st.rerun()
     # A normal form avoids overlap with the fixed mobile navigation.
@@ -157,60 +268,61 @@ elif page=='PACO':
     if submit and text.strip():
         with st.spinner('PACO consultando…'):answer(text.strip())
         st.rerun()
+elif page=='Ajuda':
+    customer_support(store,s,go,flash,choose)
+    quick('Outros serviços: fretes, avisos e avaliações','Serviços',service='Frete')
 elif page=='Serviços':
-    st.title('Central de serviços')
-    service=st.radio('Escolha um serviço',['Frete','Protocolos','Notificações','Avaliação'],horizontal=True,key='service_nav')
+    st.title('O que você precisa?')
+    st.caption('Escolha uma tarefa abaixo. Você pode trocar de serviço a qualquer momento.')
+    service=choose('service_nav',[('Frete','Calcular frete','calculate'),('Protocolos','Pedir ajuda','support_agent'),('Notificações','Ver avisos','notifications'),('Avaliação','Avaliar entrega','star')],'service_menu')
+    st.divider()
     if service=='Frete':
-        st.subheader('Simulador de fretes');st.caption('Tarifas fictícias · distância estimada por coordenadas, não distância rodoviária.')
+        st.subheader('Quanto custa enviar uma carga?');guide('Em três etapas','Escolha as cidades, informe as medidas e selecione o tipo de entrega.','Exemplo: Fortaleza → Sobral, 20 kg, caixa de 50 × 40 × 30 cm.')
         with st.form('frete'):
+            step(1,'De onde sai e para onde vai?')
             a,b=st.columns(2);origin=a.selectbox('Origem',list(CITIES));dest=b.selectbox('Destino',list(CITIES),index=1)
-            weight=st.number_input('Peso real (kg)',min_value=.1,max_value=10000.,value=20.)
+            step(2,'Qual o peso e tamanho da embalagem?')
+            weight=st.number_input('Peso na balança (kg)',min_value=.1,max_value=10000.,value=20.)
             a,b,c=st.columns(3);length=a.number_input('Comprimento (cm)',min_value=.1,max_value=10000.,value=50.);width=b.number_input('Largura (cm)',min_value=.1,max_value=10000.,value=40.);height=c.number_input('Altura (cm)',min_value=.1,max_value=10000.,value=30.)
-            modality=st.radio('Modalidade',['Econômica','Expressa']);calc=st.form_submit_button('Calcular frete',type='primary',use_container_width=True)
+            step(3,'Escolha a velocidade da entrega')
+            modality=st.radio('Tipo de frete',['Econômica','Expressa'],format_func=lambda x:'Econômica — menor preço' if x=='Econômica' else 'Expressa — entrega mais rápida');calc=st.form_submit_button('Calcular frete',type='primary',use_container_width=True)
         if calc:
             try:s.freight=quote(origin,dest,weight,length,width,height,modality);s.context['quote']=s.freight;s.freight_saved=False
             except ValueError as e:s.pop('freight',None);st.error(str(e))
         if s.get('freight'):
-            q=s.freight;st.markdown(quote_text(q));a,b=st.columns(2);a.metric('Peso cubado',f"{q['cubed']} kg");b.metric('Peso tarifável',f"{q['charge']} kg")
+            q=s.freight
+            with st.container(border=True):
+                st.caption('Valor estimado da sua entrega');st.header(money(q['total']));st.write(f"{q['origin']} → {q['destination']} · {q['service']}")
+                a,b=st.columns(2);a.metric('Prazo estimado',f"{q['days']} dia(s)");b.metric('Distância estimada',f"{q['km']} km")
+                with st.expander('Entenda como calculamos o preço'):
+                    st.write(f"Peso na balança: {q['weight']} kg. Peso pelo espaço ocupado: {q['cubed']} kg. Peso usado no preço: {q['charge']} kg.")
+                    st.caption('Usamos o maior dos dois pesos, a distância aproximada e o tipo de entrega. Tarifas fictícias, sem validade comercial.')
+            st.caption('O orçamento é uma simulação. Registrar uma cotação não contrata o transporte.')
             if st.button('Registrar solicitação de cotação',type='primary',disabled=s.get('freight_saved',False)):
                 tid=store.save_quote(q);s.freight_saved=True;flash('Cotação registrada: '+tid+' (não constitui contratação).')
     elif service=='Protocolos':
-        st.subheader('Consulte ou abra uma ocorrência')
-        with st.form('protocol_lookup'):
-            code=st.text_input('Código da carga',value=s.track_code);tid=st.text_input('Protocolo (opcional)',placeholder='OC-XXXXXX');sub=st.form_submit_button('Consultar protocolos',type='primary')
-        if sub:s.protocol_query=(code,tid)
-        if s.get('protocol_query'):
-            code,tid=s.protocol_query
-            if not store.get(code):st.error('Carga não encontrada.')
-            else:
-                rows=[store.protocol(tid,code)] if tid else store.cargo_tickets(code);rows=[r for r in rows if r]
-                if not rows:st.info('Nenhum protocolo encontrado.')
-                for r in rows:
-                    with st.container(border=True):st.markdown(f"**{r['id']} · {r['status']}**");st.caption(f"{r['kind']} · {r['created']}")
-        with st.form('new_protocol'):
-            code=st.text_input('Carga para nova ocorrência',value=s.track_code);kind=st.selectbox('Tipo',KINDS);detail=st.text_area('Descrição (sem dados pessoais)',max_chars=300);ok=st.checkbox('Confirmo o registro desta ocorrência simulada');sub=st.form_submit_button('Registrar ocorrência')
-        if sub:
-            if not ok:st.warning('Confirme antes de registrar.')
-            else:
-                try:tid,new=store.ticket(code,kind,detail or 'Solicitação pelo portal.');flash(('Registrado: ' if new else 'Já existe: ')+tid)
-                except ValueError as e:st.error(str(e))
+        customer_support(store,s,go,flash,choose)
     elif service=='Notificações':
-        st.subheader('Notificações da entrega');code=st.text_input('Código da carga',value=s.track_code,key='notice_code')
-        for n in store.notices(code):
-            with st.container(border=True):st.markdown(n['message']);st.caption(n['created'].replace('T',' '))
-        if not store.get(code):st.info('Informe um código válido.')
+        st.subheader('Novidades sobre sua entrega');guide('Como consultar','Digite o código de rastreamento para ver mudanças de situação e atualizações de chamados.');code=st.text_input('Código da carga',value=s.track_code,key='notice_code')
+        if customer_cargo(code):
+            notices=store.notices(code)
+            if not notices:st.info('Por enquanto, não há novos avisos sobre sua entrega. Você pode voltar a consultar esta página quando quiser.')
+            for n in notices:
+                with st.container(border=True):st.markdown(n['message']);st.caption(n['created'].replace('T',' '))
         st.caption('Avisos consultados ao abrir esta tela. Não são notificações push ou mensagens externas.')
     else:
-        st.subheader('Como foi sua entrega?')
+        st.subheader('Como foi sua entrega?');guide('Sua opinião importa','Informe o código de uma carga já entregue e escolha uma nota.','Experimente PP1001.')
         with st.form('rating'):
-            code=st.text_input('Código da carga entregue',value=s.track_code);score=st.radio('Sua nota',[1,2,3,4,5],horizontal=True,index=4);sub=st.form_submit_button('Enviar avaliação',type='primary')
-        if sub:
-            try:store.rate(code,score);flash('Avaliação registrada. Obrigado!')
-            except ValueError as e:st.error(str(e))
+            code=st.text_input('Código da carga entregue',value=s.track_code);score=st.selectbox('Sua nota',[1,2,3,4,5],index=4,format_func=lambda x:{1:'1 ★ — Muito ruim',2:'2 ★ — Ruim',3:'3 ★ — Regular',4:'4 ★ — Boa',5:'5 ★ — Excelente'}[x]);sub=st.form_submit_button('Enviar avaliação',type='primary')
+        if sub and customer_cargo(code):
+            if store.get(code)['status']!='Entregue':st.info('Agradecemos seu interesse em avaliar! A avaliação estará disponível assim que a entrega for concluída. Enquanto isso, acompanhe sua carga pelo rastreamento.')
+            else:
+                try:store.rate(code,score);flash('Avaliação registrada. Muito obrigado por compartilhar sua experiência com a Transportadora Paixão!')
+                except ValueError as e:st.error(str(e))
 else:
     st.title('Central de operações')
     if not s.admin:
-        st.caption('Área administrativa · acesso restrito à demonstração.')
+        guide('Área da equipe','Entre com a senha de gestor para cadastrar entregas, resolver chamados, gerenciar veículos e consultar indicadores.')
         with st.form('login'):
             pw=st.text_input('Senha do gestor',type='password');sub=st.form_submit_button('Acessar painel',type='primary')
         if sub:
@@ -218,14 +330,16 @@ else:
             else:st.error('Senha incorreta.')
         st.stop()
     if st.button('Sair da gestão'):s.admin=False;s.pop('manager_report',None);st.rerun()
-    section=st.radio('Módulo',['Visão geral','Cargas','Protocolos','Frota','Cotações'],horizontal=True,key='manager_section')
+    st.caption('Escolha o que deseja administrar. Os dados são atualizados nesta sessão.')
+    section=choose('manager_section',[('Visão geral','Indicadores','monitoring'),('Cargas','Gerenciar cargas','inventory_2'),('Protocolos','Resolver chamados','support_agent'),('Inteligência','Plano de ação PACO','psychology'),('Frota','Veículos e motoristas','local_shipping'),('Cotações','Orçamentos','request_quote')],'manager_menu')
+    st.divider()
     if section=='Visão geral':
-        m=store.extended();st.caption('Indicadores calculados da base desta sessão · todos os dados são fictícios.')
+        st.subheader('Como está a operação?');guide('Comece pelos indicadores','Veja o volume de entregas, os atrasos e os atendimentos. Em seguida, consulte os alertas do PACO.');m=store.extended();st.caption('Indicadores calculados da base desta sessão · todos os dados são fictícios.')
         with st.container(key='metrics'):
-            for items in [[('Cargas',m['total']),('Entregues',m['delivered']),('Em operação',m['active']),('Atrasadas',m['late'])],[('Taxa de atraso',f"{100*m['late']/max(1,m['total']):.1f}%"),('Protocolos abertos',m['open_tickets']),('Satisfação',f"{m['satisfaction']}/5" if m['ratings'] else '—'),('Valor cotado',money(m['quoted_total']))],[('Interações PACO',m['interactions']),('Tempo médio',f"{m['avg_seconds']:.2f} s" if m['interactions'] else '—'),('Turnos com ação concluída',f"{100*m['resolved']/m['interactions']:.0f}%" if m['interactions'] else '—'),('Avaliações',m['ratings'])]]:
+            for items in [[('Cargas',m['total']),('Entregues',m['delivered']),('Em operação',m['active']),('Atrasadas',m['late'])],[('Taxa de atraso',f"{100*m['late']/max(1,m['total']):.1f}%"),('Protocolos abertos',m['open_tickets']),('Satisfação',f"{m['satisfaction']}/5" if m['ratings'] else '—'),('Valor cotado',money(m['quoted_total']))],[('Interações PACO',m['interactions']),('Tempo médio',f"{m['avg_seconds']:.2f} s" if m['interactions'] else '—'),('Interações concluídas',f"{100*m['resolved']/m['interactions']:.0f}%" if m['interactions'] else '—'),('Avaliações',m['ratings'])]]:
                 for col,(label,value) in zip(st.columns(len(items)),items):col.metric(label,value)
         st.caption('Valor cotado não é receita. Turnos concluídos são um indicador aproximado, não taxa de resolução de clientes.')
-        st.subheader('Radar operacional PACO');st.caption('Análise automática por regras ao acessar o painel ou atualizar; não roda em segundo plano.')
+        st.subheader('Atenção: problemas que precisam de ação');st.caption('Análise automática por regras ao acessar o painel ou atualizar; não roda em segundo plano.')
         for level,title,action in store.alerts():
             with st.container(border=True):st.markdown(f'**{level} · {title}**');st.caption(action)
         if not store.alerts():st.success('Nenhum alerta nas regras atuais.')
@@ -237,25 +351,27 @@ else:
             else:st.info('Sem atrasos.')
         with b:
             st.markdown('**Entregas por data de último registro**');st.bar_chart(pd.DataFrame.from_dict(m['delivered_days'],orient='index',columns=['Entregas']),color='#1b608c')
-        st.markdown('**Desempenho por rota**');df=pd.DataFrame(m['routes']).sort_values('rate',ascending=False);st.dataframe(df.rename(columns={'route':'Rota','total':'Total','late':'Atrasadas','rate':'Atrasos (%)'}),hide_index=True,use_container_width=True)
+        st.subheader('Quais rotas têm mais atrasos?');st.caption('Compare o percentual de cargas atrasadas em cada trajeto.');df=pd.DataFrame(m['routes']).sort_values('rate',ascending=False);st.dataframe(df.rename(columns={'route':'Rota','total':'Total','late':'Atrasadas','rate':'Atrasos (%)'}),hide_index=True,use_container_width=True)
         st.bar_chart(df.set_index('route')['rate'],horizontal=True,color='#1b608c')
         if key and st.button('Gerar análise estratégica com IA',type='primary'):
             try:
                 from openai import OpenAI
                 with st.spinner('Analisando…'):r=OpenAI(api_key=key,timeout=25,max_retries=0).chat.completions.create(model=model,messages=[{'role':'system','content':'Analista PACO. Use exclusivamente dados agregados fictícios. Produza diagnóstico e 3 ações priorizadas. Não invente números nem execute ações.'},{'role':'user','content':json.dumps({'indicadores':m,'alertas':store.alerts()},ensure_ascii=False)}],max_completion_tokens=600)
-                s.manager_report=r.choices[0].message.content
+                s.manager_report=r.choices[0].message.content;store.audit('PACO','Gerar análise com IA','Operação','Análise agregada gerada')
             except Exception:st.warning('API indisponível. O radar por regras permanece ativo.')
         if s.get('manager_report'):st.markdown('**Última análise gerada (pode estar desatualizada)**');st.markdown(s.manager_report)
         st.download_button('Baixar relatório gerencial PDF',report(store),'relatorio_paixao.pdf','application/pdf',use_container_width=True)
     elif section=='Cargas':
-        rows=store.all();status=st.selectbox('Filtrar situação',['Todas']+STATUS);df=pd.DataFrame([d for d in rows if status=='Todas' or d['status']==status]);st.dataframe(df.rename(columns={'code':'Código','origin':'Origem','destination':'Destino','location':'Localização','status':'Situação','eta':'Prazo','reason':'Motivo','updated':'Último registro','days_late':'Dias de atraso'}),hide_index=True,use_container_width=True);st.download_button('Exportar cargas CSV',df.to_csv(index=False).encode('utf-8-sig'),'cargas_paixao.csv','text/csv')
-        with st.expander('Cadastrar nova carga'):
+        st.subheader('Controle das entregas');guide('O que fazer aqui','Consulte cargas existentes, cadastre uma nova entrega ou registre uma mudança de localização ou situação.');rows=store.all();status=st.selectbox('Filtrar situação',['Todas']+STATUS);df=pd.DataFrame([d for d in rows if status=='Todas' or d['status']==status]);st.dataframe(df.rename(columns={'code':'Código','origin':'Origem','destination':'Destino','location':'Localização','status':'Situação','eta':'Prazo','reason':'Motivo','updated':'Último registro','days_late':'Dias de atraso (prazo original)','confirmed_eta':'Nova previsão'}),hide_index=True,use_container_width=True);st.download_button('Exportar cargas CSV',df.to_csv(index=False).encode('utf-8-sig'),'cargas_paixao.csv','text/csv')
+        with st.expander('1. Cadastrar nova entrega'):
+            st.caption('Informe origem, destino e prazo. O sistema gera o código de rastreio.')
             with st.form('create_cargo'):
                 a,b=st.columns(2);origin=a.selectbox('Origem',list(CITIES));dest=b.selectbox('Destino',list(CITIES),index=1);eta=st.date_input('Prazo original',today()+timedelta(days=3),min_value=today());vid=st.selectbox('Veículo (opcional)',['']+[v['id'] for v in store.fleet() if v['status']!='Manutenção']);sub=st.form_submit_button('Cadastrar',type='primary')
             if sub:
                 try:flash('Carga cadastrada: '+store.create_cargo(origin,dest,eta,vid))
                 except ValueError as e:st.error(str(e))
-        with st.expander('Atualizar movimentação'):
+        with st.expander('2. Atualizar localização ou situação'):
+            st.caption('Escolha uma carga ativa, indique a cidade atual e a nova situação. A mudança aparecerá no histórico do cliente.')
             active=[d['code'] for d in rows if d['status']!='Entregue']
             if active:
                 code=st.selectbox('Carga a atualizar',active);d=store.get(code)
@@ -266,13 +382,11 @@ else:
                     except ValueError as e:st.error(str(e))
             else:st.info('Nenhuma carga ativa.')
     elif section=='Protocolos':
-        ts=store.tickets();st.dataframe(pd.DataFrame(ts),hide_index=True,use_container_width=True) if ts else st.info('Nenhuma ocorrência registrada.')
-        open_ids=[t['id'] for t in ts if t['status']=='Aberto']
-        if open_ids:
-            tid=st.selectbox('Protocolo a resolver',open_ids)
-            if st.button('Marcar como resolvido',type='primary'):store.close(tid);flash('Protocolo resolvido; aviso criado.')
+        manager_cases(store,flash)
+    elif section=='Inteligência':
+        intelligence(store)
     elif section=='Frota':
-        vehicles=store.fleet();st.dataframe(pd.DataFrame(vehicles).rename(columns={'id':'Código','label':'Veículo','driver':'Motorista fictício','capacity':'Capacidade (kg)','status':'Situação'}),hide_index=True,use_container_width=True)
+        st.subheader('Veículos e motoristas');guide('Organize sua frota','Veja os veículos, atualize seus dados e vincule cargas a veículos que não estão em manutenção.');vehicles=store.fleet();st.dataframe(pd.DataFrame(vehicles).rename(columns={'id':'Código','label':'Veículo','driver':'Motorista fictício','capacity':'Capacidade (kg)','status':'Situação'}),hide_index=True,use_container_width=True)
         vid=st.selectbox('Cadastrar ou editar veículo',['Novo']+[v['id'] for v in vehicles]);v=next((x for x in vehicles if x['id']==vid),{})
         with st.form('vehicle_'+vid):
             new_id=st.text_input('Código V + 3 dígitos',value=v.get('id',f"V{max(int(x['id'][1:]) for x in vehicles)+1:03}"),disabled=vid!='Novo');label=st.text_input('Identificação',v.get('label',''));driver=st.text_input('Motorista fictício',v.get('driver',''));cap=st.number_input('Capacidade (kg)',min_value=1.,max_value=100000.,value=float(v.get('capacity',8000)));opts=['Disponível','Em rota','Manutenção'];stat=st.selectbox('Situação',opts,index=opts.index(v.get('status','Disponível')));sub=st.form_submit_button('Salvar veículo')
@@ -281,7 +395,7 @@ else:
                 if vid=='Novo' and any(x['id']==new_id for x in vehicles):raise ValueError('Código já cadastrado.')
                 store.save_vehicle(new_id,label,driver,cap,stat);flash('Veículo salvo.')
             except ValueError as e:st.error(str(e))
-        st.subheader('Alocação de frota');st.caption('Alocação acadêmica; não valida peso real, jornada ou disponibilidade de motorista.')
+        st.subheader('Vincular uma entrega a um veículo');st.caption('Alocação acadêmica; não valida peso real, jornada ou disponibilidade de motorista.')
         active=[d['code'] for d in store.all() if d['status']!='Entregue'];available=[v['id'] for v in vehicles if v['status']!='Manutenção']
         if active and available:
             with st.form('assignment'):
@@ -289,10 +403,10 @@ else:
             if sub:
                 try:store.assign(code,vid);flash('Vínculo atualizado.')
                 except ValueError as e:st.error(str(e))
-        st.dataframe(pd.DataFrame(store.assignments()),hide_index=True,use_container_width=True)
+        st.caption('Entregas vinculadas a veículos');st.dataframe(pd.DataFrame(store.assignments()).rename(columns={'code':'Carga','vehicle':'Veículo'}),hide_index=True,use_container_width=True)
     else:
-        qs=store.quotes();st.dataframe(pd.DataFrame(qs),hide_index=True,use_container_width=True) if qs else st.info('Nenhuma cotação registrada.')
+        st.subheader('Orçamentos solicitados');guide('Acompanhe as solicitações','Confira os fretes calculados e registrados pelos clientes. O valor é estimado e não representa receita.');qs=store.quotes();st.dataframe(pd.DataFrame(qs).rename(columns={'id':'Cotação','origin':'Origem','destination':'Destino','weight':'Peso (kg)','length':'Comprimento (cm)','width':'Largura (cm)','height':'Altura (cm)','service':'Modalidade','total':'Valor estimado (R$)','created':'Registro'}),hide_index=True,use_container_width=True) if qs else st.info('Nenhuma cotação registrada.')
         if qs:st.download_button('Exportar cotações CSV',pd.DataFrame(qs).to_csv(index=False).encode('utf-8-sig'),'cotacoes.csv','text/csv')
 with st.expander('Sobre o projeto e privacidade'):
-    st.markdown('**Fábrica de Agentes · AP2 | Paixão Connect 2.0**. Sistema acadêmico com dados fictícios. O PACO interpreta pedidos, consulta ferramentas e prepara ações; gravações dependem de confirmação. O modo sem API usa regras. O banco é isolado por sessão; reiniciar ou abrir outra sessão pode apagar os registros. Não informe dados reais. Não há GPS, contratação, pagamento, envio externo ou monitoramento contínuo.')
-st.caption('TRANSPORTADORA PAIXÃO · PACO 2.0 · Inteligência em movimento')
+    st.markdown('**Fábrica de Agentes · AP2 | Paixão Connect 3.0**. Sistema acadêmico com dados fictícios. O PACO interpreta pedidos, consulta ferramentas e prepara ações; gravações dependem de confirmação. O modo sem API usa regras. O banco é isolado por sessão; reiniciar ou abrir outra sessão pode apagar os registros. Não informe dados reais. Não há GPS, contratação, pagamento, envio externo ou monitoramento contínuo.')
+st.caption('TRANSPORTADORA PAIXÃO · PACO 3.0 · Inteligência em movimento')

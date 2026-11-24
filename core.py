@@ -91,7 +91,9 @@ class Store:
 def describe(d):
     eta=date.fromisoformat(d['eta']).strftime('%d/%m/%Y')
     msg=f"**Carga {d['code']} — {d['status']}**\n\n- Rota: {d['origin']} → {d['destination']}\n- Última localização registrada: {d['location']}\n- Prazo original: {eta}"
-    if d['days_late']: msg+=f"\n- Atraso: {d['days_late']} dia(s). Motivo: {d['reason']}.\n\nNão há nova previsão confirmada. Posso preparar uma ocorrência para a equipe avaliar."
+    if d['days_late']: msg+=f"\n- Atraso em relação ao prazo original: {d['days_late']} dia(s). Motivo: {d['reason']}."
+    if d.get('confirmed_eta'):msg+='\n- Nova previsão confirmada: '+date.fromisoformat(d['confirmed_eta']).strftime('%d/%m/%Y')
+    elif d['days_late']:msg+='\n\nAinda não temos uma nova previsão confirmada. Sentimos muito pela demora. Posso preparar uma ocorrência para a equipe avaliar.'
     return msg
 
 def forbidden(text):

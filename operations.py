@@ -1,4 +1,5 @@
 """Extended business tools. All data and prices are simulated."""
+from tracking_feedback import chat_tracking_check
 from core import Store, canonical, today, now, normalize, codes, describe, forbidden, REFUSAL, demo_reply
 from datetime import date, datetime, timedelta
 from collections import Counter, defaultdict
@@ -131,6 +132,8 @@ class Operations(Store):
 def demo_extended(text,store,ctx):
     s=normalize(text)
     if forbidden(text):return REFUSAL,None,False
+    feedback=chat_tracking_check(text,store,ctx)
+    if feedback:return feedback
     ms=codes(text)
     if len(set(ms))>1:return 'Consulte uma carga por vez.',None,False
     if ms:ctx['code']='PP'+ms[0]
