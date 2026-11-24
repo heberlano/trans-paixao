@@ -24,7 +24,7 @@ def case_card(store,t,manager=False):
     if t['status']=='Resolvido':st.success('Problema confirmado como resolvido pelo cliente.' if t['rating'] is not None else 'Encerrado no sistema anterior (sem confirmação registrada).')
     elif t['status']=='Aguardando confirmação':st.info('Temos uma proposta de solução. Precisamos saber se ela atende à sua necessidade.')
     else:st.info({'Aberto':'Recebemos sua solicitação. Ela está na fila de atendimento.','Em análise':'Sua solicitação está em análise.','Reaberto':'Recebemos seu pedido de nova análise.'}.get(t['status'],t['status']))
-    a,b=st.columns(2);a.metric('Prioridade',t['priority']);b.metric('Meta de retorno',f"{SLA[t['priority']]} h")
+    st.markdown(f"**Prioridade:** {t['priority']} · **Meta de retorno:** {SLA[t['priority']]} h")
     st.caption(f"Prazo de primeiro retorno neste ciclo: {fmt(t['deadline'])} · {t['sla']}. Meta simulada, não prazo de entrega ou de solução.")
     if t['remaining_hours'] is not None and t['status']!='Resolvido':
         if t['remaining_hours']<0:st.warning(f"Meta de retorno ultrapassada em {abs(t['remaining_hours']):.1f} h. Sinalizado para revisão da gestão.")
@@ -33,7 +33,7 @@ def case_card(store,t,manager=False):
     if t['proposed_date']:st.write('Nova data proposta: '+fmt(t['proposed_date'])+' (depende da confirmação do cliente).')
     if t['solution']:st.markdown('**Última atualização da equipe**');st.text(t['solution'])
     st.caption('Setor responsável: '+t['owner'])
-    with st.expander('Ver histórico do atendimento',expanded=True):
+    with st.expander('Ver histórico do atendimento'):
         for e in store.events(t['id'],t['code']):
             st.markdown('**'+e['event']+'**');st.caption(fmt(e['created'])+' · '+e['actor']);st.text(e['detail'])
     images=store.photos(t['id'],t['code'])
@@ -43,25 +43,23 @@ def case_card(store,t,manager=False):
     if manager:st.markdown('**Descrição enviada pelo cliente**');st.text(t['detail'])
 
 def customer_support(store,s,go,flash,choose):
-    st.markdown('<div class="support-hero"><div class="eyebrow">CUIDAMOS DA SUA ENTREGA</div><h2>Vamos resolver juntos.</h2><p>Conte o que aconteceu. Você poderá acompanhar cada atualização por aqui.</p></div>',unsafe_allow_html=True)
+    st.title('Como podemos ajudar?')
     task=choose('protocol_task',[('new','Tenho um problema','support_agent'),('lookup','Acompanhar solução','search')],'protocol_menu')
     if task=='new':
-        st.subheader('1. O que aconteceu com sua entrega?')
         if s.get('case_kind') not in TYPES:s.case_kind='Atraso'
-        kind=st.selectbox('Escolha o motivo',list(TYPES),index=list(TYPES).index(s.case_kind),format_func=lambda k:TYPES[k][0],key='compact_problem_choice')
+        kind=st.selectbox('O que aconteceu com sua entrega?',list(TYPES),index=list(TYPES).index(s.case_kind),format_func=lambda k:TYPES[k][0],key='compact_problem_choice')
         s.case_kind=kind
         st.caption(TYPES[kind][1])
-        st.subheader('2. Identifique sua carga')
+        st.markdown('**Identifique sua carga**')
         def select_case_code(code):
             s.track_code=code;s['case_code_'+kind]=code
         phone_search(store,'new_case_phone',select_case_code)
         with st.form('new_case_'+kind):
             code=st.text_input('Código de rastreamento',value=s.track_code,key='case_code_'+kind,help='PP seguido de quatro números. Exemplo: PP1003.')
-            st.markdown('**3. Conte mais sobre o ocorrido**')
-            detail=st.text_area('Descrição (opcional)',placeholder='Ex.: Preciso saber quando minha mercadoria chegará.',max_chars=300)
+            detail=st.text_area('Conte mais (opcional)',placeholder='Descreva o ocorrido, se desejar.',max_chars=300,height=80)
             desired=st.date_input('Qual data você prefere?',value=today()+timedelta(days=1),min_value=today()) if kind=='Reagendamento' else ''
             files=st.file_uploader('Fotos da embalagem ou produto (opcional)',type=['jpg','jpeg','png','webp'],accept_multiple_files=True,help='Até 3 imagens, cada uma com no máximo 5 MB. Use fotos fictícias, sem pessoas, etiquetas ou dados pessoais.') if kind=='Avaria' else []
-            st.caption('O pedido será encaminhado à fila de atendimento simulada. Não é um contato real nem uma garantia de nova data.')
+            st.caption('Encaminharemos sua solicitação para análise.')
             ok=st.checkbox('Confirmo o registro desta solicitação');submit=st.form_submit_button('Registrar e acompanhar',type='primary',use_container_width=True)
         if submit:
             d=feedback(store,code,'case_help_new',go)
@@ -72,7 +70,7 @@ def customer_support(store,s,go,flash,choose):
                     tid,new=store.ticket(d['code'],kind,detail or 'Solicitação pelo portal.',str(desired),[f.getvalue() for f in files]);s.track_code=d['code'];s.protocol_query=(d['code'],tid);s.protocol_task='lookup';flash(('Recebemos sua solicitação! Acompanhe as próximas etapas: ' if new else 'Já existe uma solicitação ativa para este problema. Vamos mostrar o andamento: ')+tid)
                 except ValueError as e:st.warning(str(e))
     else:
-        st.subheader('Acompanhe cada etapa da solução');st.caption('Informe seu código de rastreio. Se tiver o protocolo, use-o para encontrar uma solicitação específica.')
+        st.caption('Informe o código da carga ou consulte pelo telefone. O protocolo é opcional.')
         def select_lookup_code(code):
             s.track_code=code;s.protocol_query=(code,'');s['lookup_code']=code;s['lookup_tid']=''
         phone_search(store,'case_lookup_phone',select_lookup_code)
@@ -101,11 +99,13 @@ def manager_cases(store,flash):
     st.subheader('Fila de atendimento');st.caption('Priorize chamados críticos e fora do prazo. A solução só será encerrada após a confirmação do cliente.')
     m=store.complaints()
     with st.container(key='metrics_complaints'):
-        for items in [[('Recebidos',m['total']),('Pendentes',m['pending'])],[('Resolvidos',m['closed']),('Fora da meta',m['breached'])],[('Taxa de resolução',f"{m['rate']}%" if m['rate'] is not None else '—'),('Satisfação',f"{m['satisfaction']}/5" if m['satisfaction'] is not None else '—')],[('Tempo médio de resolução',f"{m['mean_hours']} h" if m['mean_hours'] is not None else '—'),('Reaberturas',m['reopened'])]]:
-            for col,(label,value) in zip(st.columns(2),items):col.metric(label,value)
-    st.caption('Fora da meta inclui retornos tardios. O prazo medido é de primeiro retorno no ciclo atual. Tempo médio considera chamados confirmados pelo cliente.')
-    if m['kinds']:st.bar_chart(pd.DataFrame.from_dict(m['kinds'],orient='index',columns=['Chamados']),horizontal=True,color='#b76b09')
-    else:st.info('Nenhuma reclamação registrada. Abra uma solicitação pelo portal ou PACO para iniciar o atendimento.')
+        for col,(label,value) in zip(st.columns(2),[('Pendentes',m['pending']),('Fora da meta',m['breached'])]):col.metric(label,value)
+        with st.expander('Indicadores e motivos das reclamações'):
+            for items in [[('Recebidos',m['total']),('Resolvidos',m['closed'])],[('Taxa de resolução',f"{m['rate']}%" if m['rate'] is not None else '—'),('Satisfação',f"{m['satisfaction']}/5" if m['satisfaction'] is not None else '—')],[('Tempo médio de resolução',f"{m['mean_hours']} h" if m['mean_hours'] is not None else '—'),('Reaberturas',m['reopened'])]]:
+                for col,(label,value) in zip(st.columns(2),items):col.metric(label,value)
+            st.caption('Fora da meta inclui retornos tardios. O prazo medido é de primeiro retorno no ciclo atual. Tempo médio considera chamados confirmados pelo cliente.')
+            if m['kinds']:st.bar_chart(pd.DataFrame.from_dict(m['kinds'],orient='index',columns=['Chamados']),horizontal=True,color='#b76b09')
+    if not m['total']:st.info('Nenhuma reclamação registrada. Abra uma solicitação pelo portal ou PACO para iniciar o atendimento.')
     rows=store.cases(); filter_status=st.radio('Mostrar',['Pendentes','Todos','Resolvidos'],horizontal=True);rows=[t for t in rows if filter_status=='Todos' or (filter_status=='Pendentes' and t['status'] in ACTIVE) or (filter_status=='Resolvidos' and t['status']=='Resolvido')]
     rows.sort(key=lambda t:(t['status']=='Resolvido', t['sla']!='Fora da meta',SLA[t['priority']],t['created']))
     if not rows:return

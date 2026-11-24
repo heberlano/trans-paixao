@@ -1,13 +1,38 @@
 import streamlit as st
-from phone_lookup import EXAMPLES, lookup
+from phone_lookup import lookup, search_delivery
 
-def examples(store):
-    with st.expander('Ver exemplos de rastreamento e telefone'):
-        st.caption('Use os códigos e telefones de exemplo abaixo. Outros telefones fictícios com DDD também geram entregas de exemplo. Não informe dados pessoais reais.')
-        for number,ids in EXAMPLES:
-            rows=[d for code in ids if (d:=store.get(code))]
-            st.markdown('**'+number+'**')
-            for d in rows:st.caption(f"{d['code']} · {d['status']} · {d['origin']} → {d['destination']}")
+
+def compact_search(store,key,on_select,on_clear=None):
+    """Compact search for home/tracking; use callback for a chosen cargo."""
+    s=st.session_state
+    with st.container(key=key+'_compact'):
+        with st.form(key+'_search',clear_on_submit=True,border=False):
+            st.markdown('**Rastrear entrega**')
+            a,b=st.columns([3,1],gap='small',vertical_alignment='bottom')
+            raw=a.text_input('Código ou telefone com DDD',placeholder='Código ou telefone com DDD',label_visibility='collapsed',max_chars=40)
+            submit=b.form_submit_button('Buscar',type='primary',use_container_width=True)
+        st.caption('Use um código ou telefone de exemplo com DDD.')
+        if submit:
+            if on_clear:on_clear()
+            rows,heading,error=search_delivery(store,raw)
+            s[key+'_matches']=[d['code'] for d in rows]
+            s[key+'_error']=(heading,error) if error else None
+            if len(rows)==1:
+                s[key+'_matches']=[]
+                on_select(rows[0]['code'])
+                st.rerun()
+        error=s.get(key+'_error')
+        if error:st.warning('**'+error[0]+'**\n\n'+error[1])
+        codes=s.get(key+'_matches',[])
+        if codes:
+            st.caption('Entregas localizadas. Escolha a que deseja acompanhar:')
+            def select(code):
+                s[key+'_matches']=[];s[key+'_error']=None
+                on_select(code)
+            for code in codes:
+                d=store.get(code)
+                if d:
+                    st.button(f"{code} · {d['status']} — {d['destination']}",key=key+'_choice_'+code,on_click=select,args=(code,),use_container_width=True)
 
 def phone_search(store,key,on_select):
     with st.expander('Não sei meu código de rastreio'):
@@ -26,4 +51,3 @@ def phone_search(store,key,on_select):
             if d:
                 st.caption(f"{code} · {d['status']} · {d['origin']} → {d['destination']}")
                 st.button('Selecionar '+code,key=key+'_select_'+code,on_click=on_select,args=(code,),use_container_width=True)
-        st.caption("Experimente (88) 00000-1234 ou outro telefone fictício com DDD.")
