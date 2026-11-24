@@ -220,7 +220,7 @@ def complaint_reply(text,store,ctx):
         except ValueError:valid=False
         if not valid:return 'Escolha uma data válida a partir de hoje.',None,False
         requested=match[0];ctx.pop('reschedule_code',None)
-    priority=classify(kind,d); msg=TYPES[kind][1]+f'\n\n**{code}** · {d["status"]}. Último registro: {d["location"]}.'
+    priority=classify(kind,d); msg=TYPES[kind][1]+f'\n\n**{code}** · {d["status"]}. Etapa: {d["stage_label"]}. Último registro: {d["location"]}.'
     if d['days_late']:msg+=f' Prazo original vencido há {d["days_late"]} dia(s). Motivo registrado: {d["reason"]}.'
     forecast=forecast_text(d)
     if forecast:msg+='\n\n**'+forecast+'**'

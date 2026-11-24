@@ -7,6 +7,30 @@ from contextlib import contextmanager
 ROUTES = [('Fortaleza','Sobral'),('Sobral','Tianguá'),('Sobral','Crateús'),('Fortaleza','Juazeiro do Norte'),('Sobral','Teresina'),('Fortaleza','Natal'),('Sobral','Parnaíba'),('Fortaleza','Recife')]
 REASONS = ['Manutenção do veículo']*4 + ['Interdição na rota']*3 + ['Falha operacional']*2 + ['Condições climáticas']
 
+STAGES = ['Aguardando coleta','Objeto coletado na origem','Objeto recebido na sede da transportadora','Em separação na transportadora','Em trânsito','Objeto recebido na unidade de destino','Saiu para entrega','Entregue']
+EXCEPTION_STAGE = 'Tentativa de entrega sem sucesso'
+STAGE_LABELS = {'Em trânsito':'Objeto em trânsito','Saiu para entrega':'Objeto saiu para entrega','Entregue':'Objeto entregue'}
+
+def stage_label(stage): return STAGE_LABELS.get(stage,stage)
+
+def stage_index(stage):
+    return 6 if stage==EXCEPTION_STAGE else STAGES.index(stage) if stage in STAGES else 0
+
+def seed_movements(c,code,origin,dest,location,status,reason,ts):
+    """Simulated completed milestones, not future movements."""
+    stage='Em trânsito' if status=='Atrasada' else status
+    c.execute('INSERT OR REPLACE INTO cargo_stage VALUES(?,?)',(code,stage))
+    idx=stage_index(stage)
+    end=datetime.fromisoformat(ts)
+    for i in range(idx + int(stage==EXCEPTION_STAGE)):
+        milestone=STAGES[i]
+        city=origin if i<4 else location if i==4 and idx==5 else dest if i>=5 else origin
+        stamp=(end-timedelta(hours=8*(idx-i+int(stage==EXCEPTION_STAGE)))).isoformat(timespec='seconds')
+        c.execute('INSERT INTO history VALUES(?,?,?)',(code,stage_label(milestone)+' · '+city,stamp))
+    event=stage_label(stage)+' · '+location
+    if reason:event+=' · '+reason
+    c.execute('INSERT INTO history VALUES(?,?,?)',(code,event,ts))
+
 def normalize(s):
     return ''.join(c for c in unicodedata.normalize('NFD',s.lower()) if unicodedata.category(c)!='Mn')
 
@@ -27,6 +51,7 @@ class Store:
         with self.connect() as c:
             c.executescript('''CREATE TABLE IF NOT EXISTS cargo(code TEXT PRIMARY KEY, origin TEXT, destination TEXT, location TEXT, status TEXT, eta TEXT, reason TEXT, updated TEXT);
             CREATE TABLE IF NOT EXISTS history(code TEXT, event TEXT, timestamp TEXT);
+            CREATE TABLE IF NOT EXISTS cargo_stage(code TEXT PRIMARY KEY, stage TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS tickets(id TEXT PRIMARY KEY, code TEXT, kind TEXT, detail TEXT, status TEXT, created TEXT);
             CREATE TABLE IF NOT EXISTS interactions(id INTEGER PRIMARY KEY, mode TEXT, resolved INTEGER, seconds REAL, created TEXT);''')
             c.execute('BEGIN IMMEDIATE')
@@ -48,16 +73,20 @@ class Store:
             if i in special: origin,dest,loc,status=special[i]
             else:
                 origin,dest=ROUTES[(i-1)%len(ROUTES)]; status=remaining[i-7]; loc=dest if status=='Entregue' else origin
+                extra={67:STAGES[1],68:STAGES[2],69:STAGES[3],70:STAGES[5],71:STAGES[6],72:EXCEPTION_STAGE,73:STAGES[1],74:STAGES[2],75:STAGES[3],76:STAGES[5]}
+                if status=='Em trânsito' and i in extra:
+                    status=extra[i];loc=dest if stage_index(status)>=5 else origin
             delta=-2 if status=='Atrasada' else -1 if status=='Entregue' else 0 if status=='Saiu para entrega' else 1+(i%4)
             eta=(t+timedelta(days=delta)).isoformat()
             reason=REASONS[j] if status=='Atrasada' else ''; j+=int(status=='Atrasada')
             updated=now(); c.execute('INSERT INTO cargo VALUES(?,?,?,?,?,?,?,?)',(code,origin,dest,loc,status,eta,reason,updated))
-            c.execute('INSERT INTO history VALUES(?,?,?)',(code,f'Registro de expedição: {origin}',(t-timedelta(days=4)).isoformat()+'T08:00:00'))
-            c.execute('INSERT INTO history VALUES(?,?,?)',(code,f'{status} • {loc}'+(f' • {reason}' if reason else ''),updated))
+            seed_movements(c,code,origin,dest,loc,status,reason,updated)
     def get(self,code):
-        with self.connect() as c: r=c.execute('SELECT * FROM cargo WHERE code=?',(canonical(code),)).fetchone()
-        if not r: return None
-        d=dict(r); d['days_late']=0 if d['status']=='Entregue' else max(0,(today()-date.fromisoformat(d['eta'])).days)
+        with self.connect() as c:
+            r=c.execute('SELECT * FROM cargo WHERE code=?',(canonical(code),)).fetchone()
+            if not r:return None
+            phase=c.execute('SELECT stage FROM cargo_stage WHERE code=?',(r['code'],)).fetchone()
+        d=dict(r); d['stage']=phase[0] if phase else ('Em trânsito' if d['status']=='Atrasada' else d['status']); d['stage_label']=stage_label(d['stage']); d['days_late']=0 if d['status']=='Entregue' else max(0,(today()-date.fromisoformat(d['eta'])).days)
         if d['days_late']>0: d['status']='Atrasada'; d['reason']=d['reason'] or 'Motivo ainda não registrado'
         return d
     def all(self):
@@ -115,7 +144,7 @@ def forecast_text(d):
 
 def describe(d):
     eta=date.fromisoformat(d['eta']).strftime('%d/%m/%Y')
-    msg=f"**Carga {d['code']} — {d['status']}**\n\n- Rota: {d['origin']} → {d['destination']}\n- Última localização registrada: {d['location']}\n- Prazo original: {eta}"
+    msg=f"**Carga {d['code']} — {d['status']}**\n\n- Rota: {d['origin']} → {d['destination']}\n- Etapa do transporte: {d.get('stage_label',d['status'])}\n- Última localização registrada: {d['location']}\n- Prazo original: {eta}"
     if d['days_late']: msg+=f"\n- Atraso em relação ao prazo original: {d['days_late']} dia(s). Motivo: {d['reason']}."
     forecast=forecast_text(d)
     if forecast:msg+='\n- '+forecast

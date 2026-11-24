@@ -1,8 +1,13 @@
-# Paixão Connect 3.6 — Interface essencial
+# Paixão Connect 3.7 — Identidade e rastreamento detalhado
 
-Atualização visual da versão 3.5. A página inicial contém uma busca única por código ou telefone e acesso à central de ajuda. Quatro itens de navegação: Início, PACO, Ajuda e Mais (frete, avisos, avaliação e gestão). O mapa de rastreio permanece visível após uma busca; detalhes e ações secundárias ficam recolhidos. A conversa ocupa uma área com rolagem. Submenus usam seletores, e os indicadores detalhados ficam em seções expansíveis. Botões principais em azul-marinho, sem cartões grandes ou balão laranja do PACO. Preserva os 100 códigos iniciais, geração por telefone, motivos humorísticos, novas previsões, reclamações, gestão, fretes, fotos, relatórios, SLA e confirmação da resolução. Esta atualização é de interface, não inclui os novos recursos opcionais de compensação, comprovantes ou análise de sentimento discutidos separadamente.
+Equilíbrio entre o visual da versão 3.5 e a navegação compacta da 3.6. Banner curto azul-marinho com ilustração de caminhão, detalhes em laranja, busca em um campo, quatro itens no menu, central de ajuda discreta e mapa sempre visível depois da consulta. Sem balão laranja do PACO ou lista pública de exemplos.
 
-Se já utiliza a versão 3.5, substitua apenas `app.py`, `lookup_ui.py`, `support_ui.py` e `.streamlit/config.toml`. O pacote completo também está disponível.
+## Etapas do transporte
+Aguardando coleta; objeto coletado na origem; objeto recebido na sede da transportadora; em separação; em trânsito; objeto recebido na unidade de destino; saiu para entrega; entregue. Há também tentativa de entrega sem sucesso e registro de atraso. O atraso é exibido separadamente da etapa física, inclusive quando o gestor atualiza a movimentação de uma carga vencida. O histórico dos novos registros contém apenas movimentações simuladas já ocorridas, com datas e locais. Bases anteriores são lidas sem excluir registros; para cargas antigas que só informavam “Atrasada”, a etapa inicial de referência é “Em trânsito”. Não são adicionados eventos retroativos a bases antigas.
+
+Códigos adicionais para testar em sessão nova: PP1067 (coletada), PP1068 (na sede), PP1069 (separação), PP1070 (unidade de destino), PP1071 (saiu para entrega), PP1072 (tentativa sem sucesso). PP1003 continua atrasada pelo Flamengo e PP1006 pelo jiu-jítsu. As cargas geradas por telefone também têm histórico detalhado.
+
+Se já utiliza a versão 3.6, envie os arquivos do pacote de atualização rápida para a raiz do repositório. O pacote completo também está disponível. Os arquivos de teste e documentação são opcionais para execução, mas acompanham o código para verificação.
 
 ## Nova previsão
 Toda carga atrasada recebe uma nova data estimada fictícia, inclusive as criadas por telefone. O cálculo determinístico usa o último registro, o prazo original e um intervalo de 1 a 3 dias conforme o código; ao chegar à data estimada, avança para a próxima janela. Uma nova previsão confirmada pelo gestor e aceita pelo cliente prevalece enquanto vigente. O prazo original não é alterado. A nova data aparece no rastreio, PACO, avisos e gestão. Não é garantia comercial.
@@ -34,7 +39,7 @@ Os números são intencionalmente fictícios, não discáveis; não use dados re
 ## Limites técnicos
 - SQLite isolado por sessão; utilize a mesma aba para o fluxo cliente/gestor. Não é uma base de produção. Não há autenticação de titularidade do telefone, GPS, contatos externos, notificações em segundo plano ou persistência garantida após reinício. Fretes e SLA são estimativas de referência. Para uso comercial, implementar autenticação, controle de acesso, proteção de dados e integração de rastreio real.
 - A API é opcional e usa os Secrets existentes. Sem API, o atendimento funciona por regras. A consulta de telefone é local nos dois modos.
-- 73 testes automatizados de regras de negócio passaram novamente. Sintaxe compilada. Streamlit não está instalado neste ambiente; renderização em celular e API ao vivo devem ser conferidas após publicação.
+- 81 testes automatizados passaram: os 73 cenários anteriores (um teste de histórico foi atualizado para refletir o histórico ampliado) e oito testes novos de movimentação. Sintaxe compilada. Streamlit não está instalado neste ambiente; renderização em celular e API ao vivo devem ser conferidas após publicação.
 
 ## Execução local
 `python -m pip install -r requirements.txt`

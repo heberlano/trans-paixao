@@ -13,7 +13,7 @@ class PacoTests(unittest.TestCase):
     def test_tracking(self):
         msg,p,r=demo_reply('Onde está a carga PP1002?',self.store,{}); self.assertIn('Itapajé',msg); self.assertIsNone(p); self.assertTrue(r)
     def test_invalid(self): self.assertIn('Não encontrei',demo_reply('PP9999',self.store,{})[0])
-    def test_history(self): self.assertEqual(len(self.store.history('PP1002')),2)
+    def test_history(self): self.assertEqual(len(self.store.history('PP1002')),5); self.assertIn('Objeto coletado na origem',self.store.history('PP1002')[1]['event'])
     def test_confirmation_and_duplicate(self):
         msg,p,r=demo_reply('Minha carga PP1003 está atrasada. Registre uma ocorrência.',self.store,{})
         self.assertIn('Manutenção',msg); self.assertFalse(r); self.assertEqual(len(self.store.tickets()),0)

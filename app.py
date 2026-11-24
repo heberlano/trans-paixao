@@ -2,7 +2,7 @@ import os, time, hmac, tempfile, json, html
 from datetime import timedelta
 import pandas as pd
 import streamlit as st
-from core import today, describe, forecast_text
+from core import today, describe, forecast_text, stage_index, stage_label, STAGES
 from tracking_feedback import tracking_result
 from operations import Operations, CITIES, STATUS, KINDS, quote, quote_text, money, demo_extended
 from paco import reply, confirm
@@ -133,6 +133,16 @@ button[kind="primary"],button[kind="primaryFormSubmit"]{background:#153a56!impor
 .stApp [data-testid="stForm"]{padding:11px;border-radius:11px;}.stApp [data-testid="stExpander"]{border-radius:10px;}
 [data-testid="stMetric"]{padding:10px;border-radius:10px;}.stApp [data-testid="stMetricValue"]{font-size:1.35rem;}
 @media(max-width:700px){.block-container{padding:.8rem .85rem calc(5.7rem + env(safe-area-inset-bottom,0px))!important;}.st-key-navbox{bottom:calc(6px + env(safe-area-inset-bottom,0px))!important;}.st-key-navbox .stButton button{min-height:48px!important;}.st-key-navbox button p{font-size:.72rem!important;}.st-key-navbox button [data-testid="stIconMaterial"]{font-size:20px!important;}.st-key-home_help{padding:10px 12px;}}
+/* 3.7: compact brand with a warmer, more lively palette. */
+.home-intro{position:relative;overflow:hidden;isolation:isolate;background:linear-gradient(116deg,#102b43 0%,#174364 65%,#23617e 100%);border-radius:17px;padding:18px 18px 20px;color:#fff;box-shadow:0 5px 18px #102b431c;border-bottom:3px solid #f5a623;}
+.home-intro .intro-copy{position:relative;z-index:1;max-width:76%;}.home-intro .intro-tag{color:#ffcc82;font-size:.63rem;font-weight:750;letter-spacing:.08em;margin-bottom:5px;}.home-intro h1{color:white!important;font-size:clamp(1.45rem,4vw,2.05rem)!important;line-height:1.1!important;}.home-intro p{color:#e1ebf7!important;font-size:.83rem;line-height:1.35;margin:7px 0 0;}.intro-art{position:absolute;right:7px;bottom:5px;width:26%;max-width:150px;pointer-events:none;opacity:.94;}
+.st-key-home_help{border-left:3px solid #f5a623;padding:12px 14px;box-shadow:0 3px 12px #102b4309;}.help-title{display:flex;align-items:center;gap:8px;font-size:.98rem;font-weight:800;color:#102b43}.help-title svg{width:23px;height:23px;flex:none;color:#a65a08;}
+.st-key-home_search_compact,.st-key-track_search_compact{box-shadow:0 3px 12px #102b4309;}.st-key-home_search_compact button[kind="primaryFormSubmit"],.st-key-track_search_compact button[kind="primaryFormSubmit"]{background:#f5a623!important;border-color:#f5a623!important;color:#102b43!important;}.st-key-home_search_compact button[kind="primaryFormSubmit"] p,.st-key-track_search_compact button[kind="primaryFormSubmit"] p{color:#102b43!important;}
+.st-key-navbox button[kind="primary"],.st-key-navbox button[kind="primary"] p{background:#fff0d7!important;color:#8a4400!important;}
+.track-kicker{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.78rem;}.track-badge{padding:3px 8px;background:#eaf2f7;color:#174364;border-radius:20px;font-size:.72rem;font-weight:750;}.track-badge.late{background:#fff0d7;color:#8a4400;}.track-badge.done{background:#e5f5eb;color:#146c42;}
+.phase-panel{padding:9px 10px;background:#f6f8fb;border-radius:10px;}.phase-panel small{display:block;font-size:.73rem;color:#52677c;}.phase-panel strong{font-size:.87rem;color:#102b43;}.phase-bar{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px;margin-top:6px;}.phase-bar span{height:5px;border-radius:8px;background:#dbe4ee;}.phase-bar .past{background:#22617e;}.phase-bar .current{background:#f5a623;}.phase-bar .complete{background:#21815a;}
+@media(max-width:700px){.home-intro{padding:15px 13px 16px;}.home-intro .intro-copy{max-width:77%;}.home-intro h1{font-size:1.4rem!important;}.home-intro p{font-size:.79rem;}.intro-art{width:24%;right:5px;}.st-key-home_help{padding:10px 12px;}}
+@media(max-width:340px){.home-intro .intro-copy{max-width:100%;}.intro-art{opacity:.10;}}
 </style>''',unsafe_allow_html=True)
 if access and not s.access:
     st.title('Transportadora Paixão'); entered=st.text_input('Código de acesso',type='password')
@@ -208,7 +218,12 @@ def track(code):
     if not d:return
     code=d['code']
     with st.container(key='tracking_summary'):
-        st.markdown(f'<div class="track-kicker">{escape(code)} · {escape(d["status"])}</div><div class="track-route">{escape(d["origin"])} → {escape(d["destination"])}</div><div class="track-location">Último registro: {escape(d["location"])}</div>',unsafe_allow_html=True)
+        badge='late' if d['status']=='Atrasada' or d['stage']=='Tentativa de entrega sem sucesso' else 'done' if d['status']=='Entregue' else ''
+        status_label='Atrasada' if d['status']=='Atrasada' else 'Entregue' if d['status']=='Entregue' else 'Atenção' if d['stage']=='Tentativa de entrega sem sucesso' else 'No prazo'
+        st.markdown(f'<div class="track-kicker">{escape(code)}<span class="track-badge {badge}">{escape(status_label)}</span></div><div class="track-route">{escape(d["origin"])} → {escape(d["destination"])}</div><div class="track-location">Último registro: {escape(d["location"])}</div>',unsafe_allow_html=True)
+        idx=stage_index(d['stage'])
+        segments=''.join('<span class="'+('complete' if d['status']=='Entregue' else 'past' if i<idx else 'current' if i==idx else '')+'"></span>' for i in range(len(STAGES)))
+        st.markdown(f'<div class="phase-panel"><small>Etapa atual do transporte</small><strong>{escape(d["stage_label"])}</strong><div class="phase-bar" role="img" aria-label="Etapa {idx+1} de {len(STAGES)}">{segments}</div></div>',unsafe_allow_html=True)
         deadline=pd.Timestamp(d['eta']).strftime('%d/%m/%Y')
         forecast=forecast_text(d)
         if forecast:
@@ -261,10 +276,10 @@ def service_card(key,title,description,button,page,service=None,primary=False):
         quick(button,page,service=service,primary=primary)
 
 if page=='Início':
-    st.markdown('<div class="home-intro"><h1>Sua entrega, nossa prioridade.</h1><p>Acompanhe sua carga ou resolva um imprevisto.</p></div>',unsafe_allow_html=True)
+    st.markdown('''<div class="home-intro"><div class="intro-copy"><div class="intro-tag">INTELIGÊNCIA EM MOVIMENTO</div><h1>Sua entrega,<br>nossa prioridade.</h1><p>Acompanhe sua carga ou resolva um imprevisto.</p></div><svg class="intro-art" viewBox="0 0 140 116" aria-hidden="true"><circle cx="76" cy="54" r="51" fill="#fff" opacity=".07"/><path d="M4 93h130" stroke="#fff" stroke-opacity=".2" stroke-width="2" stroke-dasharray="5 5"/><rect x="9" y="27" width="75" height="53" rx="5" fill="#eef5fb"/><path d="M84 41h20l24 24v15H84z" fill="#f5a623"/><path d="M92 48h10l15 16H92z" fill="#174364"/><path d="M22 43h45M22 53h34" stroke="#174364" stroke-width="4" stroke-linecap="round"/><path d="M22 63h22" stroke="#f5a623" stroke-width="4" stroke-linecap="round"/><circle cx="33" cy="82" r="11" fill="#102b43" stroke="#bacddd" stroke-width="2"/><circle cx="108" cy="82" r="11" fill="#102b43" stroke="#bacddd" stroke-width="2"/><circle cx="33" cy="82" r="4" fill="#eef5fb"/><circle cx="108" cy="82" r="4" fill="#eef5fb"/></svg></div>''',unsafe_allow_html=True)
     compact_search(store,'home_search',lambda code:go('Rastreio',code))
     with st.container(key='home_help'):
-        st.markdown('**Algo não saiu como esperado?**')
+        st.markdown('<div class="help-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 18 0v4a3 3 0 0 1-3 3h-3M3 13h3v5H5a2 2 0 0 1-2-2zM21 13h-3v5"/><path d="M12 19h3"/></svg>Algo não saiu como esperado?</div>',unsafe_allow_html=True)
         st.caption('Atraso, avaria ou mercadoria não recebida? Vamos ajudar.')
         quick('Resolver ou acompanhar um problema','Ajuda')
     st.caption('Fretes, avisos, avaliações e gestão estão em Mais.')
@@ -399,7 +414,7 @@ else:
         if s.get('manager_report'):st.markdown('**Última análise gerada (pode estar desatualizada)**');st.markdown(s.manager_report)
         st.download_button('Baixar relatório gerencial PDF',report(store),'relatorio_paixao.pdf','application/pdf',use_container_width=True)
     elif section=='Cargas':
-        st.subheader('Controle das entregas');guide('O que fazer aqui','Consulte cargas existentes, cadastre uma nova entrega ou registre uma mudança de localização ou situação.');rows=store.all();status=st.selectbox('Filtrar situação',['Todas']+STATUS);df=pd.DataFrame([d for d in rows if status=='Todas' or d['status']==status]);st.dataframe(df.rename(columns={'code':'Código','origin':'Origem','destination':'Destino','location':'Localização','status':'Situação','eta':'Prazo','reason':'Motivo','updated':'Último registro','days_late':'Dias de atraso (prazo original)','confirmed_eta':'Nova previsão confirmada','estimated_eta':'Nova previsão estimada'}),hide_index=True,use_container_width=True);st.download_button('Exportar cargas CSV',df.to_csv(index=False).encode('utf-8-sig'),'cargas_paixao.csv','text/csv')
+        st.subheader('Controle das entregas');guide('O que fazer aqui','Consulte cargas existentes, cadastre uma nova entrega ou registre uma mudança de localização ou situação.');rows=store.all();status=st.selectbox('Filtrar situação',['Todas']+STATUS);df=pd.DataFrame([d for d in rows if status=='Todas' or d['status']==status]);st.dataframe(df.rename(columns={'code':'Código','origin':'Origem','destination':'Destino','location':'Localização','status':'Situação','stage':'Etapa','stage_label':'Descrição da etapa','eta':'Prazo','reason':'Motivo','updated':'Último registro','days_late':'Dias de atraso (prazo original)','confirmed_eta':'Nova previsão confirmada','estimated_eta':'Nova previsão estimada'}),hide_index=True,use_container_width=True);st.download_button('Exportar cargas CSV',df.to_csv(index=False).encode('utf-8-sig'),'cargas_paixao.csv','text/csv')
         with st.expander('1. Cadastrar nova entrega'):
             st.caption('Informe origem, destino e prazo. O sistema gera o código de rastreio.')
             with st.form('create_cargo'):
@@ -408,12 +423,12 @@ else:
                 try:flash('Carga cadastrada: '+store.create_cargo(origin,dest,eta,vid))
                 except ValueError as e:st.error(str(e))
         with st.expander('2. Atualizar localização ou situação'):
-            st.caption('Escolha uma carga ativa, indique a cidade atual e a nova situação. A mudança aparecerá no histórico do cliente.')
+            st.caption('Escolha a carga, a cidade atual e a etapa do transporte. Se estiver atrasada, a nova etapa aparecerá sem apagar o atraso do prazo original.')
             active=[d['code'] for d in rows if d['status']!='Entregue']
             if active:
                 code=st.selectbox('Carga a atualizar',active);d=store.get(code)
                 with st.form('update_'+code):
-                    loc=st.selectbox('Localização',list(CITIES),index=list(CITIES).index(d['location']));stat=st.selectbox('Nova situação',STATUS,index=STATUS.index(d['status']));reason=st.text_input('Motivo (obrigatório para atraso)',value=d['reason']);sub=st.form_submit_button('Salvar movimentação',type='primary')
+                    loc=st.selectbox('Localização',list(CITIES),index=list(CITIES).index(d['location']));stat=st.selectbox('Nova etapa ou registro de atraso',STATUS,index=STATUS.index(d['stage']),format_func=stage_label);reason=st.text_input('Motivo (obrigatório para atraso)',value=d['reason']);sub=st.form_submit_button('Salvar movimentação',type='primary')
                 if sub:
                     try:store.update_cargo(code,loc,stat,reason);flash('Movimentação registrada.')
                     except ValueError as e:st.error(str(e))
@@ -446,4 +461,4 @@ else:
         if qs:st.download_button('Exportar cotações CSV',pd.DataFrame(qs).to_csv(index=False).encode('utf-8-sig'),'cotacoes.csv','text/csv')
 with st.expander('Sobre o serviço e privacidade'):
     st.markdown('**Transportadora Paixão | Paixão Connect**. Ambiente com dados de exemplo. O PACO interpreta pedidos, consulta ferramentas e prepara ações; gravações dependem de confirmação. O modo sem API usa regras. O banco é isolado por sessão; reiniciar ou abrir outra sessão pode apagar os registros. Não informe dados reais. Não há GPS, contratação, pagamento, envio externo ou monitoramento contínuo.')
-st.caption('TRANSPORTADORA PAIXÃO · PACO 3.6 · Inteligência em movimento')
+st.caption('TRANSPORTADORA PAIXÃO · PACO 3.7 · Inteligência em movimento')

@@ -2,7 +2,7 @@
 import re, hmac, hashlib, secrets
 from datetime import timedelta
 from delay_scenarios import SCENARIOS
-from core import normalize, forbidden, REFUSAL, describe, today, now, ROUTES
+from core import normalize, forbidden, REFUSAL, describe, today, now, ROUTES, seed_movements
 
 EXAMPLES = [('(88) 00000-0001',('PP1002','PP1003')),('(85) 00000-0002',('PP1001','PP1004')),('(88) 00000-0003',('PP1005','PP1006')),('(86) 00000-0004',('PP1093','PP1094')),('(85) 00000-0005',('PP1064','PP1065')),('(88) 00000-0006',('PP1099','PP1100')),('(85) 00000-0007',('PP1010','PP1020')),('(86) 00000-0008',('PP1050','PP1080'))]
 HELP='Sem problema! Se você não tem o código de rastreamento, informe o telefone com DDD vinculado à compra. Neste ambiente de simulação, use um telefone fictício com DDD, como (88) 00000-1234. Se não houver associação, criaremos entregas de exemplo para você testar.'
@@ -44,8 +44,7 @@ def lookup(store,raw):
                 reason=SCENARIOS[ordinal%len(SCENARIOS)][0] if j==0 else ''
                 eta=(t+timedelta(days=-2 if j==0 else 2)).isoformat()
                 c.execute('INSERT INTO cargo VALUES(?,?,?,?,?,?,?,?)',(code,origin,dest,origin,status,eta,reason,ts))
-                c.execute('INSERT INTO history VALUES(?,?,?)',(code,'Expedição fictícia · '+origin,(t-timedelta(days=4)).isoformat()+'T08:00:00'))
-                c.execute('INSERT INTO history VALUES(?,?,?)',(code,status+' · '+origin+(' · '+reason if reason else ''),ts))
+                seed_movements(c,code,origin,dest,origin,status,reason,ts)
                 c.execute('INSERT INTO demo_phone_cargo VALUES(?,?)',(digest,code))
     return [store.get(code) for code in ids],''
 

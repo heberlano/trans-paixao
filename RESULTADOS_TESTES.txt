@@ -52,6 +52,14 @@ test_satisfaction_validation (test_resolution.ResolutionTests.test_satisfaction_
 test_sla_escalation (test_resolution.ResolutionTests.test_sla_escalation) ... ok
 test_workflow (test_resolution.ResolutionTests.test_workflow) ... ok
 test_wrong_cargo (test_resolution.ResolutionTests.test_wrong_cargo) ... ok
+test_active_updates_and_exception (test_stages.StageTests.test_active_updates_and_exception) ... ok
+test_attempt_follows_departure (test_stages.StageTests.test_attempt_follows_departure) ... ok
+test_delay_and_stage_independent (test_stages.StageTests.test_delay_and_stage_independent) ... ok
+test_full_delivered_timeline (test_stages.StageTests.test_full_delivered_timeline) ... ok
+test_legacy_without_stage_table (test_stages.StageTests.test_legacy_without_stage_table) ... ok
+test_no_future_history (test_stages.StageTests.test_no_future_history) ... ok
+test_phone_history (test_stages.StageTests.test_phone_history) ... ok
+test_seed_variety (test_stages.StageTests.test_seed_variety) ... ok
 test_ai_invalid_before_api (test_tracking_feedback.TrackingFeedbackTests.test_ai_invalid_before_api) ... ok
 test_demo_invalid_memory (test_tracking_feedback.TrackingFeedbackTests.test_demo_invalid_memory) ... ok
 test_formats (test_tracking_feedback.TrackingFeedbackTests.test_formats) ... ok
@@ -73,6 +81,6 @@ test_refuse (test_v2.V2Tests.test_refuse) ... ok
 test_seed_and_migration (test_v2.V2Tests.test_seed_and_migration) ... ok
 
 ----------------------------------------------------------------------
-Ran 73 tests in 2.552s
+Ran 81 tests in 3.389s
 
 OK

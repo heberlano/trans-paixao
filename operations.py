@@ -1,12 +1,12 @@
 """Extended business tools. All data and prices are simulated."""
 from tracking_feedback import chat_tracking_check
-from core import Store, canonical, today, now, normalize, codes, describe, forbidden, REFUSAL, demo_reply, forecast_text
+from core import Store, canonical, today, now, normalize, codes, describe, forbidden, REFUSAL, demo_reply, forecast_text, STAGES, EXCEPTION_STAGE, stage_label
 from datetime import date, datetime, timedelta
 from collections import Counter, defaultdict
 import math, re, secrets
 
 CITIES={'Fortaleza':(-38.5267,-3.7319),'Sobral':(-40.3497,-3.688),'Itapajé':(-39.583,-3.686),'Tianguá':(-40.991,-3.729),'Crateús':(-40.677,-5.178),'Teresina':(-42.803,-5.089),'Juazeiro do Norte':(-39.315,-7.213),'Iguatu':(-39.298,-6.359),'Natal':(-35.209,-5.795),'Parnaíba':(-41.777,-2.905),'Recife':(-34.877,-8.047)}
-STATUS=['Aguardando coleta','Em trânsito','Saiu para entrega','Entregue','Atrasada']
+STATUS=STAGES[:-1]+[EXCEPTION_STAGE,STAGES[-1],'Atrasada']
 KINDS=['Atraso','Prioridade','Reclamação','Entrega não reconhecida','Avaria']
 
 def money(n): return f'R$ {n:,.2f}'.replace(',','X').replace('.',',').replace('X','.')
@@ -63,7 +63,7 @@ class Operations(Store):
         d=self.get(code)
         if not d:return []
         with self.connect() as c:out=[dict(r) for r in c.execute('SELECT message,created FROM notices WHERE code=? ORDER BY id DESC',(d['code'],))]
-        out.append({'message':f"Última situação: {d['status']} · {d['location']}",'created':d['updated']})
+        out.append({'message':f"Última situação: {d['status']} · {d['stage_label']} · {d['location']}",'created':d['updated']})
         if d['days_late']:out.insert(0,{'message':f"Prazo original vencido há {d['days_late']} dia(s). {d['reason']}. {forecast_text(d)}",'created':now()})
         return out
     def create_cargo(self,origin,destination,eta,vehicle=''):
@@ -82,11 +82,17 @@ class Operations(Store):
         if d['status']=='Entregue':raise ValueError('Carga entregue não pode ser alterada nesta demonstração.')
         if status=='Entregue' and location!=d['destination']:raise ValueError('Entrega deve ocorrer no destino.')
         if status=='Atrasada' and not reason.strip():raise ValueError('Informe o motivo do atraso.')
-        if d['days_late'] and status!='Entregue':status='Atrasada'; reason=reason.strip() or d['reason']
-        ts=now()
+        stage=d['stage'] if status=='Atrasada' else status
+        late=status=='Atrasada' or (d['days_late']>0 and status!='Entregue')
+        reason=(reason.strip() or d['reason']) if late else ''
+        saved_status='Atrasada' if late else status
+        ts=now();event=stage_label(stage)+' · '+location
+        if late:event+=' · Atraso: '+reason[:150]
         with self.connect() as c:
-            c.execute('UPDATE cargo SET location=?,status=?,reason=?,updated=? WHERE code=?',(location,status,reason[:150] if status=='Atrasada' else '',ts,d['code'])); c.execute('INSERT INTO history VALUES(?,?,?)',(d['code'],f'{status} · {location}'+(f' · {reason[:150]}' if status=='Atrasada' else ''),ts))
-        self.notify(d['code'],f'{status} · {location}')
+            c.execute('UPDATE cargo SET location=?,status=?,reason=?,updated=? WHERE code=?',(location,saved_status,reason[:150],ts,d['code']))
+            c.execute('INSERT OR REPLACE INTO cargo_stage VALUES(?,?)',(d['code'],stage))
+            c.execute('INSERT INTO history VALUES(?,?,?)',(d['code'],event,ts))
+        self.notify(d['code'],event)
     def fleet(self):
         with self.connect() as c:return [dict(r) for r in c.execute('SELECT * FROM fleet ORDER BY id')]
     def save_vehicle(self,vid,label,driver,capacity,status):
@@ -116,7 +122,7 @@ class Operations(Store):
         with self.connect() as c:n,avg=c.execute('SELECT COUNT(*),AVG(score) FROM ratings').fetchone()
         m.update(routes=[dict(route=k,total=v[0],late=v[1],rate=round(v[1]/v[0]*100,1)) for k,v in routes.items()],ratings=n,satisfaction=round(avg,2) if n else None,quotes=len(self.quotes()),quoted_total=round(sum(q['total'] for q in self.quotes()),2),fleet=len(self.fleet()),delivered_days=dict(delivered_days)); return m
     def alerts(self):
-        rows=self.all(); a=[]; late=[d for d in rows if d['status']=='Atrasada']; risk=[d for d in rows if d['status'] in STATUS[:2] and 0<=(date.fromisoformat(d['eta'])-today()).days<=1]
+        rows=self.all(); a=[]; late=[d for d in rows if d['status']=='Atrasada']; risk=[d for d in rows if d['status'] not in ('Entregue','Atrasada','Saiu para entrega') and 0<=(date.fromisoformat(d['eta'])-today()).days<=1]
         if late:a.append(('Alta',f'{len(late)} cargas atrasadas','Priorizar revisão de ocorrências e prazos.'))
         if risk:a.append(('Atenção',f'{len(risk)} cargas próximas do prazo','Verificar movimentações e capacidade antes do vencimento.'))
         old=[t for t in self.tickets() if t['status']=='Aberto' and datetime.now()-datetime.fromisoformat(t['created'])>timedelta(hours=24)]
