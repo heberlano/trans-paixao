@@ -1,8 +1,9 @@
 """PACO 3.0: auditable complaint workflow, with customer confirmation."""
 from operations import Operations, KINDS, money
-from core import today, now, normalize, forbidden, REFUSAL, delivery_estimate, forecast_text, describe
+from core import today, now, normalize, forbidden, REFUSAL, delivery_estimate, forecast_text, describe, delay_summary, delay_metrics
 from tracking_feedback import tracking_result, chat_tracking_check
 from phone_lookup import chat_phone, HELP
+from service_bridge import chat_protocol_text
 from delay_scenarios import install, SCENARIOS
 from datetime import datetime, timedelta, date
 from collections import Counter
@@ -118,6 +119,7 @@ class ResolutionStore(Operations):
                     r=c.execute('SELECT eta FROM confirmed_eta WHERE code=?',(d['code'],)).fetchone();d['confirmed_eta']=r[0] if r else ''
             d.setdefault('confirmed_eta','')
             d['estimated_eta']=delivery_estimate(d)
+            d['delay_metrics']=delay_metrics(d)
         return d
     def manager_update(self,tid,owner,note,propose=False,new_date=''):
         t=next((x for x in self.cases() if x['id']==tid),None)
@@ -197,6 +199,15 @@ def complaint_reply(text,store,ctx):
     if feedback:return feedback
     if re.search(r'frete|cotacao|orcamento|quanto custa|avali|notific|alerta',s):return None
     code=ctx.get('code','');d=store.get(code) if code else None
+    # Read the same live complaint records in both PACO and the Help screen.
+    protocol_id=re.search(r'\bOC-[A-F0-9]{6}\b',text.upper())
+    protocol_lookup=protocol_id or re.search(r'(?:consult|acompan|qual|status|andamento|situacao|atualiz).*(?:chamado|protocolo|reclamacao)|(?:chamado|protocolo).*(?:status|andamento|situacao|atualiz)',s)
+    if protocol_lookup and not re.search(r'abrir|registrar|criar',s):
+        if not d:return 'Informe o código de rastreamento da sua entrega para consultar o chamado.',None,False
+        tid=protocol_id[0] if protocol_id else ctx.get('protocol','') if re.search(r'meu|esse|este|desse',s) else ''
+        if tid and store.case(tid,code):ctx['protocol']=tid
+        return chat_protocol_text(store,code,tid),None,True
+    if re.search(r'quantos dias|qual.*atraso|atraso total|quanto.*atras',s) and d and not re.search(r'regist|abrir|resolv|reclam',s):return describe(d),None,True
     if re.search(r'previsao|quando.*(?:cheg|entreg)|qual.*(?:data|prazo)|nova data',s) and not re.search(r'reagend|remarc|regist|abrir|reclam|resolv|soluc|priori|urgente',s):
         if not d:return 'Informe o código da entrega para que eu possa verificar a previsão. '+HELP,None,False
         return describe(d),None,True
@@ -221,7 +232,7 @@ def complaint_reply(text,store,ctx):
         if not valid:return 'Escolha uma data válida a partir de hoje.',None,False
         requested=match[0];ctx.pop('reschedule_code',None)
     priority=classify(kind,d); msg=TYPES[kind][1]+f'\n\n**{code}** · {d["status"]}. Etapa: {d["stage_label"]}. Último registro: {d["location"]}.'
-    if d['days_late']:msg+=f' Prazo original vencido há {d["days_late"]} dia(s). Motivo registrado: {d["reason"]}.'
+    if d['status']=='Atrasada':msg+=f' {delay_summary(d)}. Motivo registrado: {d["reason"]}.'
     forecast=forecast_text(d)
     if forecast:msg+='\n\n**'+forecast+'**'
     msg+=f'\n\nPreparei um chamado de **{kind}**, prioridade **{priority}**, com meta de primeiro retorno de {SLA[priority]} h na simulação. Confirme abaixo para registrar. Isso não garante a resolução nesse prazo.'

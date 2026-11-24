@@ -52,6 +52,15 @@ test_satisfaction_validation (test_resolution.ResolutionTests.test_satisfaction_
 test_sla_escalation (test_resolution.ResolutionTests.test_sla_escalation) ... ok
 test_workflow (test_resolution.ResolutionTests.test_workflow) ... ok
 test_wrong_cargo (test_resolution.ResolutionTests.test_wrong_cargo) ... ok
+test_change_cargo_clears_pending (test_service_bridge.SharedServiceTests.test_change_cargo_clears_pending) ... ok
+test_confirmed_precedence (test_service_bridge.SharedServiceTests.test_confirmed_precedence) ... ok
+test_dates_example (test_service_bridge.SharedServiceTests.test_dates_example) ... ok
+test_duplicate_from_shared_context (test_service_bridge.SharedServiceTests.test_duplicate_from_shared_context) ... ok
+test_help_registration_to_chat (test_service_bridge.SharedServiceTests.test_help_registration_to_chat) ... ok
+test_invalid_chat_clears_selection (test_service_bridge.SharedServiceTests.test_invalid_chat_clears_selection) ... ok
+test_pending_to_help (test_service_bridge.SharedServiceTests.test_pending_to_help) ... ok
+test_phone_generated (test_service_bridge.SharedServiceTests.test_phone_generated) ... ok
+test_track_to_chat (test_service_bridge.SharedServiceTests.test_track_to_chat) ... ok
 test_active_updates_and_exception (test_stages.StageTests.test_active_updates_and_exception) ... ok
 test_attempt_follows_departure (test_stages.StageTests.test_attempt_follows_departure) ... ok
 test_delay_and_stage_independent (test_stages.StageTests.test_delay_and_stage_independent) ... ok
@@ -81,6 +90,6 @@ test_refuse (test_v2.V2Tests.test_refuse) ... ok
 test_seed_and_migration (test_v2.V2Tests.test_seed_and_migration) ... ok
 
 ----------------------------------------------------------------------
-Ran 81 tests in 3.389s
+Ran 90 tests in 3.866s
 
 OK

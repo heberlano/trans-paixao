@@ -142,10 +142,35 @@ def forecast_text(d):
         return previous+'Nova previsão estimada: '+date.fromisoformat(estimate).strftime('%d/%m/%Y')+' (estimativa simulada, sujeita à confirmação da logística).'
     return ''
 
+def delay_metrics(d):
+    """Calendar days elapsed and projected, measured from the original date."""
+    if d['status'] != 'Atrasada':return {}
+    original=date.fromisoformat(d['eta'])
+    current=today()
+    confirmed=d.get('confirmed_eta','')
+    forecast=confirmed if confirmed and date.fromisoformat(confirmed)>=current else (d.get('estimated_eta') or delivery_estimate(d))
+    result={'elapsed':max(0,(current-original).days)}
+    if forecast:
+        end=date.fromisoformat(forecast)
+        result.update(remaining=max(0,(end-current).days),total=max(0,(end-original).days))
+    return result
+
+
+def day_label(n):return f"{n} dia" if n==1 else f"{n} dias"
+
+
+def delay_summary(d):
+    m=delay_metrics(d)
+    if not m:return ''
+    text='Atraso até hoje: '+day_label(m['elapsed'])
+    if 'total' in m:text+=' · Tempo restante previsto: '+day_label(m['remaining'])+' · Atraso total previsto: '+day_label(m['total'])
+    return text
+
+
 def describe(d):
     eta=date.fromisoformat(d['eta']).strftime('%d/%m/%Y')
     msg=f"**Carga {d['code']} — {d['status']}**\n\n- Rota: {d['origin']} → {d['destination']}\n- Etapa do transporte: {d.get('stage_label',d['status'])}\n- Última localização registrada: {d['location']}\n- Prazo original: {eta}"
-    if d['days_late']: msg+=f"\n- Atraso em relação ao prazo original: {d['days_late']} dia(s). Motivo: {d['reason']}."
+    if d['status']=='Atrasada': msg+=f"\n- {delay_summary(d)}. Motivo: {d['reason']}."
     forecast=forecast_text(d)
     if forecast:msg+='\n- '+forecast
     if d['status']=='Atrasada':msg+='\n\nSentimos muito pela demora. Posso preparar uma ocorrência para a equipe avaliar.'

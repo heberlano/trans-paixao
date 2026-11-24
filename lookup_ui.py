@@ -11,7 +11,7 @@ def compact_search(store,key,on_select,on_clear=None):
             a,b=st.columns([3,1],gap='small',vertical_alignment='bottom')
             raw=a.text_input('Código ou telefone com DDD',placeholder='Código ou telefone com DDD',label_visibility='collapsed',max_chars=40)
             submit=b.form_submit_button('Buscar',type='primary',use_container_width=True)
-        st.caption('Use um código ou telefone de exemplo com DDD.')
+        st.caption('Informe seu código de rastreamento (ex.: **PP1002**) ou o telefone cadastrado com DDD.')
         if submit:
             if on_clear:on_clear()
             rows,heading,error=search_delivery(store,raw)

@@ -2,7 +2,7 @@ import os, time, hmac, tempfile, json, html
 from datetime import timedelta
 import pandas as pd
 import streamlit as st
-from core import today, describe, forecast_text, stage_index, stage_label, STAGES
+from core import today, describe, forecast_text, delay_summary, stage_index, stage_label, STAGES
 from tracking_feedback import tracking_result
 from operations import Operations, CITIES, STATUS, KINDS, quote, quote_text, money, demo_extended
 from paco import reply, confirm
@@ -11,6 +11,7 @@ from resolution import ResolutionStore, complaint_reply
 from support_ui import customer_support, manager_cases, intelligence
 from lookup_ui import compact_search
 from phone_lookup import redact
+from service_bridge import select_delivery, sync_chat_delivery, open_help, registered
 
 st.set_page_config(page_title='Paixão Connect | PACO',page_icon='🚚',layout='wide',initial_sidebar_state='collapsed')
 def setting(name,default=''):
@@ -143,6 +144,28 @@ button[kind="primary"],button[kind="primaryFormSubmit"]{background:#153a56!impor
 .phase-panel{padding:9px 10px;background:#f6f8fb;border-radius:10px;}.phase-panel small{display:block;font-size:.73rem;color:#52677c;}.phase-panel strong{font-size:.87rem;color:#102b43;}.phase-bar{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px;margin-top:6px;}.phase-bar span{height:5px;border-radius:8px;background:#dbe4ee;}.phase-bar .past{background:#22617e;}.phase-bar .current{background:#f5a623;}.phase-bar .complete{background:#21815a;}
 @media(max-width:700px){.home-intro{padding:15px 13px 16px;}.home-intro .intro-copy{max-width:77%;}.home-intro h1{font-size:1.4rem!important;}.home-intro p{font-size:.79rem;}.intro-art{width:24%;right:5px;}.st-key-home_help{padding:10px 12px;}}
 @media(max-width:340px){.home-intro .intro-copy{max-width:100%;}.intro-art{opacity:.10;}}
+
+/* 3.9 — corporate transport portal. Original artwork and brand; mobile first. */
+:root{--pc-bg:#f5f7fa;--pc-text:#122d44;--pc-muted:#53687a;--pc-line:#dce4eb;--pc-accent:#f5a623;}
+.block-container{max-width:1100px;padding:1.35rem 2rem 2.5rem!important;}
+.brand{gap:11px;margin:0!important;padding:5px 0;}.brand-mark{width:44px;height:44px;border-radius:12px;background:#102b43;}.brand-name{font-size:1.25rem;letter-spacing:-.045em;font-weight:850;}.brand-tag{font-size:.64rem;letter-spacing:.12em;color:#53687a!important;}
+.brand-name em{font-style:normal;color:#a65a08;}.brand-sub{margin-left:auto;font-size:.69rem;font-weight:750;color:#53687a;letter-spacing:.08em;text-align:right;}
+.st-key-navbox{padding:3px 0!important;border:0!important;border-bottom:1px solid var(--pc-line)!important;border-radius:0;box-shadow:none;background:transparent;}
+.st-key-navbox button[kind="primary"],.st-key-navbox button[kind="primary"] p{background:#eaf0f5!important;color:#102b43!important;}.st-key-navbox .stButton button{border-radius:8px!important;min-height:44px;}
+.home-intro{display:flex;align-items:center;min-height:218px;position:relative;overflow:hidden;isolation:isolate;padding:28px 30px;background:linear-gradient(110deg,#0e293f 0%,#163d59 68%,#215b72 100%);border:0;border-radius:14px;box-shadow:none;}
+.home-intro:before{content:'';position:absolute;right:0;top:0;width:7px;height:100%;background:#f5a623;z-index:3;}
+.home-intro .intro-copy{max-width:57%;z-index:2;}.home-intro .intro-tag{display:flex;align-items:center;gap:7px;color:#ffca77;font-size:.69rem;letter-spacing:.14em;font-weight:800;margin:0 0 11px;}.intro-tag:before{content:'';height:2px;width:19px;background:#f5a623;flex:none;}
+.home-intro h1{font-size:clamp(1.75rem,3.5vw,2.65rem)!important;line-height:1.08!important;letter-spacing:-.04em;margin:0!important;padding:0!important;}.home-intro h1 span{color:#ffbf58;}.home-intro p{font-size:.92rem;line-height:1.4;margin:10px 0 0!important;max-width:340px;}.intro-art{width:47%;max-width:470px;right:9px;bottom:0;opacity:1;}
+.st-key-home_search_compact,.st-key-track_search_compact{border-radius:13px;border:1px solid var(--pc-line);padding:14px 17px!important;box-shadow:0 3px 12px #102b4308;}.st-key-home_search_compact [data-testid="stForm"] [data-testid="stHorizontalBlock"],.st-key-track_search_compact [data-testid="stForm"] [data-testid="stHorizontalBlock"]{grid-template-columns:minmax(0,1fr) minmax(106px,auto);}.st-key-home_search_compact [data-testid="stCaptionContainer"] p,.st-key-track_search_compact [data-testid="stCaptionContainer"] p{font-size:.81rem;}
+.st-key-home_search_compact .stFormSubmitButton button,.st-key-track_search_compact .stFormSubmitButton button{border-radius:8px!important;}
+.st-key-home_help{padding:13px 16px!important;border-left:3px solid #f5a623;border-radius:12px;box-shadow:none;}.help-title{font-size:1.03rem;}.st-key-home_help [data-testid="stCaptionContainer"] p{font-size:.84rem;}.st-key-home_help button{background:#153a56!important;border-color:#153a56!important;}.st-key-home_help button p{color:#fff!important;}
+.st-key-home_shortcuts [data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important;}.st-key-home_shortcuts [data-testid="stColumn"]{width:100%!important;min-width:0!important;flex:none!important;}.st-key-home_shortcuts [data-testid="stVerticalBlock"]{gap:.3rem!important;}.st-key-home_shortcuts button{justify-content:flex-start!important;min-height:45px!important;padding:8px 12px!important;border-radius:9px!important;}.st-key-home_shortcuts button p{font-size:.85rem;line-height:1.2;white-space:normal!important;}.st-key-home_shortcuts button [data-testid="stIconMaterial"]{color:#a65a08!important;}
+.portal-label{font-size:.74rem;letter-spacing:.09em;text-transform:uppercase;font-weight:750;color:#53687a;margin:1px 0 0;}.portal-footer{font-size:.73rem;color:#53687a;border-top:1px solid var(--pc-line);padding:10px 0 0;}
+.st-key-tracking_summary{padding:14px!important;border-radius:12px;}.track-date{background:#ecf3f8;}.phase-bar .current{background:#f5a623;}.st-key-compact_map{background:#fff;border:1px solid var(--pc-line);padding:9px 10px;border-radius:12px;}
+.support-hero{border-radius:12px;box-shadow:none;padding:16px 18px;}.stApp [data-testid="stForm"],.stApp [data-testid="stExpander"]{border-radius:10px;}.stButton button,.stFormSubmitButton button,.stDownloadButton button{border-radius:9px;}
+@media(min-width:701px){.st-key-navbox [data-testid="stHorizontalBlock"]{gap:9px!important;}.st-key-navbox .stButton button{justify-content:center!important;}.st-key-navbox button p{font-size:.9rem!important;}}
+@media(max-width:700px){.block-container{padding:.7rem .85rem calc(5.6rem + env(safe-area-inset-bottom,0px))!important;}.brand{gap:8px;padding:2px 0;}.brand-mark{width:38px;height:38px;}.brand-name{font-size:1.12rem;}.brand-tag{font-size:.54rem;letter-spacing:.06em;}.brand-sub{display:none;}.home-intro{min-height:154px;padding:17px 14px;border-radius:12px;}.home-intro:before{width:4px;}.home-intro .intro-copy{max-width:67%;}.home-intro .intro-tag{font-size:.55rem;letter-spacing:.075em;margin-bottom:8px;gap:4px;}.intro-tag:before{width:10px;}.home-intro h1{font-size:clamp(1.35rem,5.8vw,1.8rem)!important;}.home-intro p{font-size:.78rem;line-height:1.3;margin-top:7px!important;}.intro-art{width:36%;right:1px;bottom:4px;}.st-key-navbox{background:#fff!important;border:1px solid var(--pc-line)!important;border-radius:14px!important;padding:4px!important;box-shadow:0 5px 24px #102b4329!important;}.st-key-navbox .stButton button{min-height:48px!important;}.st-key-home_search_compact,.st-key-track_search_compact{padding:10px 11px!important;}.st-key-home_help{padding:10px 12px!important;}.st-key-home_shortcuts button{padding:7px 6px!important;}.st-key-home_shortcuts button p{font-size:.78rem;}.st-key-tracking_summary{padding:10px!important;}}
+@media(max-width:360px){.home-intro .intro-copy{max-width:77%;}.intro-art{width:35%;opacity:.6;}.home-intro .intro-tag{letter-spacing:0;}.st-key-home_search_compact [data-testid="stForm"] [data-testid="stHorizontalBlock"],.st-key-track_search_compact [data-testid="stForm"] [data-testid="stHorizontalBlock"]{grid-template-columns:minmax(0,1fr) 77px;}}
 </style>''',unsafe_allow_html=True)
 if access and not s.access:
     st.title('Transportadora Paixão'); entered=st.text_input('Código de acesso',type='password')
@@ -154,29 +177,32 @@ if 'dbpath' not in s:
     fd,path=tempfile.mkstemp(prefix='paixao_',suffix='.sqlite3');os.close(fd);s.dbpath=path
 store=ResolutionStore(s.dbpath)
 store.scan_prevention()
-BRAND='''<div class="brand"><div class="brand-mark"><svg width="33" height="28" viewBox="0 0 48 36" fill="none" aria-hidden="true"><path d="M3 5h27v22H3zM30 12h9l6 8v7H30z" fill="#f5a623"/><path d="M34 15h4l4 6h-8z" fill="#102b43"/><circle cx="12" cy="28" r="5" fill="#fff" stroke="#102b43" stroke-width="2"/><circle cx="37" cy="28" r="5" fill="#fff" stroke="#102b43" stroke-width="2"/></svg></div><div><div class="brand-name">PAIXÃO CONNECT</div><div class="brand-tag">TRANSPORTADORA • INTELIGÊNCIA LOGÍSTICA</div></div></div>'''
+BRAND='''<div class="brand"><div class="brand-mark"><svg width="33" height="28" viewBox="0 0 48 36" fill="none" aria-hidden="true"><path d="M3 5h27v22H3zM30 12h9l6 8v7H30z" fill="#f5a623"/><path d="M34 15h4l4 6h-8z" fill="#102b43"/><circle cx="12" cy="28" r="5" fill="#fff" stroke="#102b43" stroke-width="2"/><circle cx="37" cy="28" r="5" fill="#fff" stroke="#102b43" stroke-width="2"/></svg></div><div><div class="brand-name">PAIXÃO <em>CONNECT</em></div><div class="brand-tag">TRANSPORTADORA PAIXÃO</div></div><div class="brand-sub">PORTAL DO CLIENTE</div></div>'''
 st.markdown(BRAND,unsafe_allow_html=True)
 PAGES=['Início','PACO','Ajuda','Serviços']
 NAV_ICONS=['home','smart_toy','support_agent','more_horiz']
 def go(p,code=None,service=None):
     s.nav=p
     if p=='Serviços' and service is None:s.service_nav='Menu'
-    if code:
-        s.track_code=code
+    if code and select_delivery(s,store,code):
         s.notice_code=code
         if p=='Rastreio':
             s.track_selected=code
             s.track_search_matches=[];s.track_search_error=None
     if service:s.service_nav=service
-    if service=='Protocolos':
-        s.nav='Ajuda';s.protocol_task='new'
-    if p=='Ajuda' and code:
-        s.protocol_task='new'
-        cargo=store.get(code)
-        s.case_kind='Atraso' if cargo and cargo['status']=='Atrasada' else 'Reclamação'
-        s['case_code_'+s.case_kind]=code
-        s.compact_problem_choice=s.case_kind
-    if code:s.protocol_query=(code,'')
+    if p=='Ajuda' or service=='Protocolos':
+        s.nav='Ajuda'
+        if code or service=='Protocolos':open_help(s,store,code)
+        elif s.get('context',{}).get('code'):
+            if s.get('pending') and s.pending.get('kind'):open_help(s,store)
+            elif s.get('protocol_task')=='lookup' and s.get('protocol_query',('',''))[0]==s.context['code']:open_help(s,store,protocol=s.protocol_query[1])
+            else:open_help(s,store)
+    if p=='PACO' and code and s.get('track_code')==code:s.context['code']=code
+
+def go_help(protocol=None):
+    open_help(s,store,protocol=protocol)
+    s.nav='Ajuda'
+
 
 with st.container(key='navbox'):
     for col,p,icon in zip(st.columns(4,gap='small'),PAGES,NAV_ICONS):
@@ -228,7 +254,9 @@ def track(code):
         forecast=forecast_text(d)
         if forecast:
             title=forecast.split(' (')[0]
-            detail=f'Prazo original: {deadline}'+(f' · {d["days_late"]} dia(s) de atraso' if d['days_late'] else '')
+            detail=f'Prazo original: {deadline}'
+            metrics=delay_summary(d)
+            if metrics:detail+=' · '+metrics
             if ' (' in forecast:detail+=' · Estimativa sujeita à confirmação.'
             st.markdown(f'<div class="track-date"><b>{escape(title)}</b><small>{escape(detail)}</small></div>',unsafe_allow_html=True)
         elif d['status']!='Entregue':st.markdown(f'<div class="track-date"><b>Previsão: {escape(deadline)}</b></div>',unsafe_allow_html=True)
@@ -263,6 +291,10 @@ def answer(text):
         except Exception:msg,pending,resolved=demo_extended(text,store,s.context);s.ai_error=True;mode='Contingência'
     else:msg,pending,resolved=demo_extended(text,store,s.context)
     store.log(mode,resolved,time.monotonic()-start);store.audit('PACO','Interpretar e consultar',s.context.get('code',''),('Ação preparada: '+str(pending.get('kind') or pending.get('action')) if pending else 'Consulta concluída' if resolved else 'Orientação ou recusa')+' · '+mode);s.messages.extend([{'role':'user','content':redact(text)},{'role':'assistant','content':msg}]);s.pending=pending
+    sync_chat_delivery(s,store)
+    tid=s.context.get('protocol')
+    if tid and s.context.get('code') and store.case(tid,s.context['code']):
+        s.protocol_query=(s.context['code'],tid);s.protocol_task='lookup';s.help_refresh=True
 
 SERVICE_ICONS={
     'avaliacao':'<path d="m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2-5.7-3-5.7 3 1.1-6.2-4.5-4.4 6.3-.9z"/>',
@@ -276,13 +308,17 @@ def service_card(key,title,description,button,page,service=None,primary=False):
         quick(button,page,service=service,primary=primary)
 
 if page=='Início':
-    st.markdown('''<div class="home-intro"><div class="intro-copy"><div class="intro-tag">INTELIGÊNCIA EM MOVIMENTO</div><h1>Sua entrega,<br>nossa prioridade.</h1><p>Acompanhe sua carga ou resolva um imprevisto.</p></div><svg class="intro-art" viewBox="0 0 140 116" aria-hidden="true"><circle cx="76" cy="54" r="51" fill="#fff" opacity=".07"/><path d="M4 93h130" stroke="#fff" stroke-opacity=".2" stroke-width="2" stroke-dasharray="5 5"/><rect x="9" y="27" width="75" height="53" rx="5" fill="#eef5fb"/><path d="M84 41h20l24 24v15H84z" fill="#f5a623"/><path d="M92 48h10l15 16H92z" fill="#174364"/><path d="M22 43h45M22 53h34" stroke="#174364" stroke-width="4" stroke-linecap="round"/><path d="M22 63h22" stroke="#f5a623" stroke-width="4" stroke-linecap="round"/><circle cx="33" cy="82" r="11" fill="#102b43" stroke="#bacddd" stroke-width="2"/><circle cx="108" cy="82" r="11" fill="#102b43" stroke="#bacddd" stroke-width="2"/><circle cx="33" cy="82" r="4" fill="#eef5fb"/><circle cx="108" cy="82" r="4" fill="#eef5fb"/></svg></div>''',unsafe_allow_html=True)
+    st.markdown('''<div class="home-intro"><div class="intro-copy"><div class="intro-tag">TRANSPORTE &amp; LOGÍSTICA</div><h1>Conectamos destinos.<br><span>Cuidamos da sua entrega.</span></h1><p>Rastreie sua mercadoria e conte com nosso atendimento em cada etapa do caminho.</p></div><svg class="intro-art" viewBox="0 0 380 222" fill="none" aria-hidden="true"><defs><linearGradient id="road" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".03"/><stop offset="1" stop-color="#fff" stop-opacity=".17"/></linearGradient><linearGradient id="cargo" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#cbdde9"/></linearGradient></defs><path d="M66 222L210 112 380 112V222Z" fill="url(#road)"/><path d="M0 198L380 198" stroke="#a7c4d5" stroke-opacity=".3" stroke-width="2" stroke-dasharray="13 12"/><circle cx="260" cy="91" r="86" stroke="#e2effa" stroke-opacity=".13" stroke-width="1.5"/><circle cx="260" cy="91" r="66" stroke="#e2effa" stroke-opacity=".16" stroke-width="1.5" stroke-dasharray="4 8"/><path d="M30 102C67 42 105 42 144 66S224 95 272 31" stroke="#ffc16a" stroke-width="2" stroke-dasharray="6 6" opacity=".8"/><circle cx="30" cy="102" r="5" fill="#f5a623"/><path d="M272 15a12 12 0 0 0-12 12c0 9 12 18 12 18s12-9 12-18a12 12 0 0 0-12-12z" fill="#f5a623"/><circle cx="272" cy="27" r="4" fill="#153a56"/><path d="M45 154h292v15H45z" fill="#0d253b"/><rect x="51" y="82" width="190" height="76" rx="5" fill="url(#cargo)"/><path d="M241 105h52l43 35v21h-95z" fill="#f5a623"/><path d="M253 113h37l30 25h-67z" fill="#173c59"/><path d="M253 113h8v25h-8z" fill="#315c75"/><path d="M50 145h190v8H50z" fill="#bacbd7"/><path d="M62 97h166" stroke="#c3d3df" stroke-width="2"/><path d="M62 138h166" stroke="#c3d3df" stroke-width="2"/><path d="M76 116h40M76 126h27" stroke="#174364" stroke-width="5" stroke-linecap="round"/><path d="M76 136h18" stroke="#f5a623" stroke-width="4" stroke-linecap="round"/><text x="129" y="125" font-family="Arial,sans-serif" font-size="16" font-weight="800" fill="#173c59">PAIXÃO</text><circle cx="91" cy="168" r="20" fill="#11283d" stroke="#8aa9bc" stroke-width="3"/><circle cx="91" cy="168" r="8" fill="#d4e1ea"/><circle cx="211" cy="168" r="20" fill="#11283d" stroke="#8aa9bc" stroke-width="3"/><circle cx="211" cy="168" r="8" fill="#d4e1ea"/><circle cx="302" cy="168" r="20" fill="#11283d" stroke="#8aa9bc" stroke-width="3"/><circle cx="302" cy="168" r="8" fill="#d4e1ea"/><rect x="325" y="143" width="8" height="8" rx="2" fill="#fff4cf"/></svg></div>''',unsafe_allow_html=True)
     compact_search(store,'home_search',lambda code:go('Rastreio',code))
     with st.container(key='home_help'):
         st.markdown('<div class="help-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 18 0v4a3 3 0 0 1-3 3h-3M3 13h3v5H5a2 2 0 0 1-2-2zM21 13h-3v5"/><path d="M12 19h3"/></svg>Algo não saiu como esperado?</div>',unsafe_allow_html=True)
         st.caption('Atraso, avaria ou mercadoria não recebida? Vamos ajudar.')
         quick('Resolver ou acompanhar um problema','Ajuda')
-    st.caption('Fretes, avisos, avaliações e gestão estão em Mais.')
+    with st.container(key='home_shortcuts'):
+        st.markdown('<div class="portal-label">Serviços online</div>',unsafe_allow_html=True)
+        a,b=st.columns(2,gap='small')
+        a.button('Cotação de frete',icon=':material/calculate:',key='home_quote_link',on_click=go,args=('Serviços',None,'Frete'),use_container_width=True)
+        b.button('Avisos da entrega',icon=':material/notifications:',key='home_notice_link',on_click=go,args=('Serviços',None,'Notificações'),use_container_width=True)
 elif page=='Rastreio':
     compact_search(store,'track_search',lambda code:go('Rastreio',code),lambda:setattr(s,'track_selected',None))
     if s.track_selected:track(s.track_selected)
@@ -304,11 +340,19 @@ elif page=='PACO':
         if a.button('Confirmar registro',type='primary',use_container_width=True):
             try:
                 if p.get('kind'):
-                    tid,new=store.ticket(p['code'],p['kind'],'Solicitação confirmada pelo PACO.',p.get('requested_date',''),actor='PACO');msg=('Recebemos sua solicitação! Protocolo ' if new else 'Já existe uma solicitação ativa: ')+tid+'. Acompanhe na Central de ajuda.';s.protocol_query=(p['code'],tid);s.protocol_task='lookup'
+                    tid,new=store.ticket(p['code'],p['kind'],'Solicitação confirmada pelo PACO.',p.get('requested_date',''),actor='PACO');msg=('Recebemos sua solicitação! Protocolo ' if new else 'Já existe uma solicitação ativa: ')+tid+'. Acompanhe na Central de ajuda.';registered(s,store,p['code'],tid,p['kind'])
                 else:msg=confirm(store,p);store.audit('PACO','Registro confirmado',p.get('code',''),p.get('action',''))
                 s.messages.append({'role':'assistant','content':msg});s.pending=None;st.rerun()
             except ValueError as e:st.error(str(e))
         if b.button('Cancelar',use_container_width=True):s.pending=None;st.rerun()
+    if s.context.get('code'):
+        st.caption('Entrega em atendimento: '+s.context['code'])
+        if s.pending and s.pending.get('kind'):
+            st.button('Continuar na Central de ajuda',key='chat_to_help_pending',on_click=go_help,use_container_width=True)
+        elif s.get('protocol_query',('', ''))[0]==s.context['code'] and s.protocol_query[1]:
+            st.button('Acompanhar meu chamado',key='chat_to_help_case',on_click=go_help,args=(s.protocol_query[1],),use_container_width=True)
+        else:
+            st.button('Abrir ou acompanhar chamado',key='chat_to_help',on_click=go_help,use_container_width=True)
     # A normal form avoids overlap with the fixed mobile navigation.
     with st.form('chat',clear_on_submit=True):
         text=st.text_input('Sua mensagem',placeholder='Digite sua solicitação…',max_chars=800);submit=st.form_submit_button('Enviar ao PACO',type='primary',use_container_width=True)
@@ -317,12 +361,12 @@ elif page=='PACO':
         st.rerun()
     if s.messages:
         with st.expander('Opções da conversa'):
-            if st.button('Limpar conversa'):s.messages=[];s.context={};s.pending=None;st.rerun()
+            if st.button('Limpar conversa'):s.messages=[];s.context={};s.pending=None;sync_chat_delivery(s,store);st.rerun()
 elif page=='Ajuda':
     customer_support(store,s,go,flash,choose)
 elif page=='Serviços':
     st.title('Mais serviços')
-    service=choose('service_nav',[('Menu','Selecione um serviço','more_horiz'),('Frete','Calcular frete','calculate'),('Gestão','Área do gestor','monitoring'),('Notificações','Ver avisos','notifications'),('Avaliação','Avaliar entrega','star')],'service_menu')
+    service=choose('service_nav',[('Menu','Selecione um serviço','more_horiz'),('Frete','Calcular frete','calculate'),('Notificações','Ver avisos','notifications'),('Avaliação','Avaliar entrega','star'),('Gestão','Área do gestor','monitoring')],'service_menu')
     if service=='Menu':
         st.caption('Calcule um frete, consulte avisos, avalie uma entrega ou acesse a gestão.')
     elif service=='Frete':
@@ -461,4 +505,4 @@ else:
         if qs:st.download_button('Exportar cotações CSV',pd.DataFrame(qs).to_csv(index=False).encode('utf-8-sig'),'cotacoes.csv','text/csv')
 with st.expander('Sobre o serviço e privacidade'):
     st.markdown('**Transportadora Paixão | Paixão Connect**. Ambiente com dados de exemplo. O PACO interpreta pedidos, consulta ferramentas e prepara ações; gravações dependem de confirmação. O modo sem API usa regras. O banco é isolado por sessão; reiniciar ou abrir outra sessão pode apagar os registros. Não informe dados reais. Não há GPS, contratação, pagamento, envio externo ou monitoramento contínuo.')
-st.caption('TRANSPORTADORA PAIXÃO · PACO 3.7 · Inteligência em movimento')
+st.markdown('<div class="portal-footer">TRANSPORTADORA PAIXÃO · Inteligência em movimento</div>',unsafe_allow_html=True)

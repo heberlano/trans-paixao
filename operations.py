@@ -1,6 +1,7 @@
 """Extended business tools. All data and prices are simulated."""
 from tracking_feedback import chat_tracking_check
-from core import Store, canonical, today, now, normalize, codes, describe, forbidden, REFUSAL, demo_reply, forecast_text, STAGES, EXCEPTION_STAGE, stage_label
+from service_bridge import chat_protocol_text
+from core import Store, canonical, today, now, normalize, codes, describe, forbidden, REFUSAL, demo_reply, forecast_text, delay_summary, STAGES, EXCEPTION_STAGE, stage_label
 from datetime import date, datetime, timedelta
 from collections import Counter, defaultdict
 import math, re, secrets
@@ -64,7 +65,7 @@ class Operations(Store):
         if not d:return []
         with self.connect() as c:out=[dict(r) for r in c.execute('SELECT message,created FROM notices WHERE code=? ORDER BY id DESC',(d['code'],))]
         out.append({'message':f"Última situação: {d['status']} · {d['stage_label']} · {d['location']}",'created':d['updated']})
-        if d['days_late']:out.insert(0,{'message':f"Prazo original vencido há {d['days_late']} dia(s). {d['reason']}. {forecast_text(d)}",'created':now()})
+        if d['days_late']:out.insert(0,{'message':f"{delay_summary(d)}. {d['reason']}. {forecast_text(d)}",'created':now()})
         return out
     def create_cargo(self,origin,destination,eta,vehicle=''):
         if origin not in CITIES or destination not in CITIES or origin==destination:raise ValueError('Origem e destino inválidos.')
@@ -157,7 +158,7 @@ def demo_extended(text,store,ctx):
     if 'protocolo' in s:
         if not store.get(code):return 'Informe o código da carga para consultar os protocolos.',None,False
         tid=re.search(r'\bOC-[A-F0-9]{6}\b',text.upper()); rows=[store.protocol(tid[0],code)] if tid else store.cargo_tickets(code);rows=[r for r in rows if r]
-        return ('\n\n'.join(f"**{r['id']}** · {r['kind']} · {r['status']}" for r in rows) or 'Nenhum protocolo encontrado para essa carga.'),None,True
+        return chat_protocol_text(store,code,tid[0] if tid else ''),None,True
     if re.search(r'notific|alerta',s) and store.get(code):return '\n\n'.join(r['message'] for r in store.notices(code)),None,True
     if re.search(r'avaria|danific|quebrad',s) and store.get(code):return 'Preparei uma ocorrência de avaria. Confirme para registrar.',{'code':code,'kind':'Avaria'},False
     if re.search(r'avali|satisfacao',s) and store.get(code):

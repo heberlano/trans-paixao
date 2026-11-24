@@ -7,6 +7,7 @@ from core import today
 from operations import money
 from resolution import TYPES, SLA, ACTIVE, classify
 from tracking_feedback import tracking_result
+from service_bridge import select_delivery, registered
 
 def fmt(ts):
     if not ts:return 'Ainda não registrado'
@@ -44,6 +45,14 @@ def case_card(store,t,manager=False):
 
 def customer_support(store,s,go,flash,choose):
     st.title('Como podemos ajudar?')
+    if s.pop('help_refresh',False):
+        if s.get('protocol_task')=='new':
+            kind=s.get('case_kind','Atraso');s.compact_problem_choice=kind;s['case_code_'+kind]=s.track_code
+        else:
+            s.lookup_code,s.lookup_tid=s.get('protocol_query',(s.track_code,''))
+    if s.get('track_code'):
+        st.caption('Entrega em atendimento: '+s.track_code)
+        st.button('Conversar com PACO sobre esta entrega',key='support_chat',on_click=go,args=('PACO',s.track_code),use_container_width=True)
     task=choose('protocol_task',[('new','Tenho um problema','support_agent'),('lookup','Acompanhar solução','search')],'protocol_menu')
     if task=='new':
         if s.get('case_kind') not in TYPES:s.case_kind='Atraso'
@@ -52,12 +61,16 @@ def customer_support(store,s,go,flash,choose):
         st.caption(TYPES[kind][1])
         st.markdown('**Identifique sua carga**')
         def select_case_code(code):
-            s.track_code=code;s['case_code_'+kind]=code
+            select_delivery(s,store,code);s['case_code_'+kind]=code
         phone_search(store,'new_case_phone',select_case_code)
         with st.form('new_case_'+kind):
             code=st.text_input('Código de rastreamento',value=s.track_code,key='case_code_'+kind,help='PP seguido de quatro números. Exemplo: PP1003.')
             detail=st.text_area('Conte mais (opcional)',placeholder='Descreva o ocorrido, se desejar.',max_chars=300,height=80)
-            desired=st.date_input('Qual data você prefere?',value=today()+timedelta(days=1),min_value=today()) if kind=='Reagendamento' else ''
+            pending=s.get('pending') or {}
+            preferred=today()+timedelta(days=1)
+            if kind=='Reagendamento' and pending.get('code')==s.track_code and pending.get('requested_date'):
+                preferred=max(today(),datetime.fromisoformat(pending['requested_date']).date())
+            desired=st.date_input('Qual data você prefere?',value=preferred,min_value=today()) if kind=='Reagendamento' else ''
             files=st.file_uploader('Fotos da embalagem ou produto (opcional)',type=['jpg','jpeg','png','webp'],accept_multiple_files=True,help='Até 3 imagens, cada uma com no máximo 5 MB. Use fotos fictícias, sem pessoas, etiquetas ou dados pessoais.') if kind=='Avaria' else []
             st.caption('Encaminharemos sua solicitação para análise.')
             ok=st.checkbox('Confirmo o registro desta solicitação');submit=st.form_submit_button('Registrar e acompanhar',type='primary',use_container_width=True)
@@ -67,12 +80,12 @@ def customer_support(store,s,go,flash,choose):
             elif d:
                 try:
                     if len(files)>3 or any(f.size>5*1024*1024 for f in files):raise ValueError('Envie até três imagens de 5 MB cada.')
-                    tid,new=store.ticket(d['code'],kind,detail or 'Solicitação pelo portal.',str(desired),[f.getvalue() for f in files]);s.track_code=d['code'];s.protocol_query=(d['code'],tid);s.protocol_task='lookup';flash(('Recebemos sua solicitação! Acompanhe as próximas etapas: ' if new else 'Já existe uma solicitação ativa para este problema. Vamos mostrar o andamento: ')+tid)
+                    tid,new=store.ticket(d['code'],kind,detail or 'Solicitação pelo portal.',str(desired),[f.getvalue() for f in files]);registered(s,store,d['code'],tid,kind);s.messages.append({'role':'assistant','content':f'Chamado {tid} · {kind} · carga {d["code"]}. Você pode consultar o andamento aqui ou na Central de ajuda.'});flash(('Recebemos sua solicitação! Acompanhe as próximas etapas: ' if new else 'Já existe uma solicitação ativa para este problema. Vamos mostrar o andamento: ')+tid)
                 except ValueError as e:st.warning(str(e))
     else:
         st.caption('Informe o código da carga ou consulte pelo telefone. O protocolo é opcional.')
         def select_lookup_code(code):
-            s.track_code=code;s.protocol_query=(code,'');s['lookup_code']=code;s['lookup_tid']=''
+            select_delivery(s,store,code);s.protocol_query=(code,'');s['lookup_code']=code;s['lookup_tid']=''
         phone_search(store,'case_lookup_phone',select_lookup_code)
         with st.form('case_lookup'):
             previous=s.get('protocol_query',(s.track_code,''));code=st.text_input('Código da carga',value=previous[0],key='lookup_code');tid=st.text_input('Protocolo (opcional)',value=previous[1],key='lookup_tid',placeholder='OC-XXXXXX');sub=st.form_submit_button('Consultar atendimento',type='primary',use_container_width=True)
@@ -80,6 +93,8 @@ def customer_support(store,s,go,flash,choose):
         if not s.get('protocol_query'):return
         code,tid=s.protocol_query;d=feedback(store,code,'case_help_lookup',go)
         if not d:return
+        select_delivery(s,store,d['code'])
+        if tid and store.case(tid,d['code']):s.context['protocol']=tid.upper()
         cases=[store.case(tid,d['code'])] if tid.strip() else [x for x in store.cases() if x['code']==d['code']];cases=[x for x in cases if x]
         if not cases:st.info('Ainda não encontramos chamados nessa consulta. Confira os códigos ou selecione Tenho um problema para registrar uma solicitação.');return
         for t in cases:
