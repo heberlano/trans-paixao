@@ -19,7 +19,31 @@ admin_pass=setting('ADMIN_PASSWORD','paixao2026'); access=setting('DEMO_ACCESS_C
 for k,v in {'messages':[],'context':{},'pending':None,'admin':False,'access':False,'ai_error':False}.items():
     if k not in st.session_state: st.session_state[k]=v
 st.markdown('''<style>
-.stApp {background:#f4f7fb;color:#102b43} [data-testid="stSidebar"]{background:#102b43;} [data-testid="stSidebar"] *{color:#fff;} [data-testid="stSidebar"] input{color:#102b43!important;background:#fff!important;} .block-container{max-width:1180px;padding-top:2rem;padding-bottom:3rem;} .hero{background:linear-gradient(115deg,#102b43,#183f5d);color:#fff;padding:26px 32px;border-radius:18px;margin-bottom:20px;border-bottom:5px solid #f5a623} .hero small{color:#ffbf58;font-weight:700;letter-spacing:.12em} .hero h1{color:white!important;font-size:2.25rem;margin:4px 0;line-height:1.15} .hero p{color:#dbe7ef;margin:8px 0 0} [data-testid="stMetric"]{background:white;border:1px solid #e0e8ef;padding:15px;border-radius:13px;box-shadow:0 3px 10px #102b4308;} [data-testid="stChatMessage"]{background:white;border-radius:12px;border:1px solid #e3eaf1;padding:12px;} .stButton button[kind="primary"]{background:#f5a623;border-color:#f5a623;color:#102b43;font-weight:700;} .foot{font-size:.82rem;color:#63788b;margin-top:20px;} </style>''',unsafe_allow_html=True)
+/* Native Streamlit widgets inherit the active light/dark theme. */
+.block-container {max-width:1180px;padding-top:3.5rem;padding-bottom:3rem;}
+.hero {background:linear-gradient(115deg,#102b43,#183f5d);color:#fff;padding:26px 32px;border-radius:18px;margin-bottom:20px;border-bottom:5px solid #f5a623;overflow-wrap:break-word;}
+.hero small {color:#ffbf58;font-weight:700;letter-spacing:.09em;}
+.hero h1 {color:#fff!important;font-size:clamp(1.5rem,4vw,2.25rem);margin:4px 0;line-height:1.15;}
+.hero p {color:#dbe7ef;margin:8px 0 0;}
+[data-testid="stMetric"], [data-testid="stChatMessage"] {border:1px solid rgba(128,128,128,.35);border-radius:13px;padding:12px;min-width:0;}
+[data-testid="stMetricLabel"] {white-space:normal;}
+[data-testid="stChatMessageContent"] {min-width:0;overflow-wrap:anywhere;}
+button[kind="primary"] {background:#f5a623!important;border-color:#f5a623!important;color:#102b43!important;font-weight:700;}
+button[kind="primary"] p {color:#102b43!important;}
+.foot {font-size:.82rem;color:inherit;opacity:.8;margin-top:20px;}
+@media (max-width:640px) {
+  .block-container {padding:3.6rem 1rem 2rem;}
+  .hero {padding:18px 16px;margin-bottom:12px;border-radius:14px;}
+  .hero small {font-size:.72rem;letter-spacing:.05em;}
+  .hero h1 {font-size:1.5rem;}
+  .hero p {font-size:.9rem;}
+  [data-testid="stChatMessage"] {padding:9px;}
+  [data-testid="stHorizontalBlock"] {flex-wrap:wrap!important;gap:.7rem!important;}
+  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {flex:1 1 100%!important;width:100%!important;min-width:0!important;}
+  [data-testid="stMetric"] {padding:10px 12px;}
+  [data-testid="stButton"] button, [data-testid="stFormSubmitButton"] button {min-height:44px;}
+}
+</style>''',unsafe_allow_html=True)
 if access and not st.session_state.access:
     st.title('Transportadora Paixão')
     entered=st.text_input('Código de acesso à demonstração',type='password')
@@ -143,4 +167,4 @@ else:
 Projeto acadêmico de Administração: automatizar consultas de rastreamento e apoiar a gestão logística. O agente percebe a solicitação, consulta dados com ferramentas, avalia a situação e prepara uma ação. O registro exige confirmação humana.
 
 **Limites:** dados inteiramente fictícios; sem envio de mensagens, sem GPS, sem transações financeiras. O SQLite é isolado por sessão de navegador; reiniciar a sessão pode apagar os registros. O modo sem API é uma automação por regras, não um LLM. Não utilize dados reais ou pessoais.''')
-st.markdown('<p class="foot">Transportadora Paixão · Projeto acadêmico simulado · PACO 1.0</p>',unsafe_allow_html=True)
+st.markdown('<p class="foot">Transportadora Paixão · Projeto acadêmico simulado · PACO 1.1</p>',unsafe_allow_html=True)
