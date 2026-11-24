@@ -1,0 +1,14 @@
+test_ai_scope_mock (test_paco.PacoTests.test_ai_scope_mock) ... ok
+test_ai_tools_mock (test_paco.PacoTests.test_ai_tools_mock) ... ok
+test_confirmation_and_duplicate (test_paco.PacoTests.test_confirmation_and_duplicate) ... ok
+test_history (test_paco.PacoTests.test_history) ... ok
+test_invalid (test_paco.PacoTests.test_invalid) ... ok
+test_metrics (test_paco.PacoTests.test_metrics) ... ok
+test_refusal (test_paco.PacoTests.test_refusal) ... ok
+test_seed (test_paco.PacoTests.test_seed) ... ok
+test_tracking (test_paco.PacoTests.test_tracking) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.132s
+
+OK
