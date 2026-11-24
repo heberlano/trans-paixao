@@ -35,3 +35,6 @@
 
 ## Evidências para entregar
 Capture 3 prints ao vivo: consulta comum, caso difícil com protocolo, pedido proibido recusado. Registre ajustes feitos após o teste. Os testes automatizados incluídos não substituem os prints solicitados pelo professor. Baseado no material da disciplina, páginas 14, 17, 18 e 19.
+
+## Atualização 2.0 — Demonstração adicional
+PACO agora também usa ferramentas de cotação, consulta de protocolos, notificações e avaliação. A área administrativa inclui gestão de cargas, frota, cotações, radar operacional e relatórios. O radar é calculado ao abrir/atualizar o painel; não monitora continuamente. Os indicadores são calculados da base fictícia da sessão. As novas ações do chat exigem confirmação; as funções gerenciais exigem senha. Para a apresentação, demonstre a ocorrência PP1003, sua resolução no painel e a notificação no portal; se houver tempo, faça uma cotação e mostre o registro na gestão. Use os três testes obrigatórios (comum, difícil e proibido), capture prints reais após publicar.

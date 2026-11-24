@@ -1,0 +1,27 @@
+test_ai_scope_mock (test_paco.PacoTests.test_ai_scope_mock) ... ok
+test_ai_tools_mock (test_paco.PacoTests.test_ai_tools_mock) ... ok
+test_confirmation_and_duplicate (test_paco.PacoTests.test_confirmation_and_duplicate) ... ok
+test_history (test_paco.PacoTests.test_history) ... ok
+test_invalid (test_paco.PacoTests.test_invalid) ... ok
+test_metrics (test_paco.PacoTests.test_metrics) ... ok
+test_refusal (test_paco.PacoTests.test_refusal) ... ok
+test_seed (test_paco.PacoTests.test_seed) ... ok
+test_tracking (test_paco.PacoTests.test_tracking) ... ok
+test_cargo_create_update (test_v2.V2Tests.test_cargo_create_update) ... ok
+test_fleet (test_v2.V2Tests.test_fleet) ... ok
+test_late_preserved (test_v2.V2Tests.test_late_preserved) ... ok
+test_llm_scope (test_v2.V2Tests.test_llm_scope) ... ok
+test_llm_tools (test_v2.V2Tests.test_llm_tools) ... ok
+test_metrics (test_v2.V2Tests.test_metrics) ... ok
+test_pdf (test_v2.V2Tests.test_pdf) ... ok
+test_protocol_and_notice (test_v2.V2Tests.test_protocol_and_notice) ... ok
+test_quote (test_v2.V2Tests.test_quote) ... ok
+test_quote_memory_confirm (test_v2.V2Tests.test_quote_memory_confirm) ... ok
+test_rating (test_v2.V2Tests.test_rating) ... ok
+test_refuse (test_v2.V2Tests.test_refuse) ... ok
+test_seed_and_migration (test_v2.V2Tests.test_seed_and_migration) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests in 0.616s
+
+OK

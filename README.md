@@ -1,49 +1,44 @@
-# PAIXÃO CONNECT — PACO
-Transportadora Paixão | Fábrica de Agentes, AP2 — caso 4 (Logística)
+# Paixão Connect 2.0 | PACO
 
-## Comece aqui
-Aplicação Streamlit em português, com identidade azul-marinho, laranja e branco. O banco SQLite é criado automaticamente com 100 cargas fictícias (PP1001–PP1100). Não precisa importar planilha. O PACO consulta carga e histórico e prepara ocorrências; a confirmação grava o protocolo. O gestor pode consultar indicadores, exportar CSV e encerrar chamados.
-
-## Publicar gratuitamente (GitHub + Streamlit Community Cloud)
-1. Extraia o ZIP. Entre em https://github.com/new e crie um repositório `paixao-connect`, com README inicial se desejar.
-2. No repositório, use **Add file > Upload files**, envie o conteúdo extraído: `app.py`, `core.py`, `agent.py`, `requirements.txt`, `README.md`, `test_paco.py`, `secrets.example.toml`, `resultados_testes.txt` e `GUIA_AP2.md`. Clique **Commit changes**. Não envie chaves. Os arquivos ocultos são opcionais para executar: se não conseguir enviar `.streamlit/config.toml`, crie-o com **Add file > Create new file**, usando esse nome completo e copie o conteúdo fornecido. Faça o mesmo com `.gitignore`.
-3. Entre em https://share.streamlit.io/ e conecte sua conta GitHub. Escolha **Create app / Deploy a public app from GitHub**. Selecione repositório, branch `main` e arquivo principal `app.py`. Escolha um subdomínio disponível, por exemplo `paixao-connect` (não reservado). Se houver opção, use Python 3.12.
-4. Antes de clicar Deploy, em **Advanced settings > Secrets**, cole os valores abaixo. Sem chave, deixe `OPENAI_API_KEY` vazio; o site abre em modo de regras, sem IA generativa. A hospedagem Community Cloud é gratuita; API é cobrada separadamente.
+## Atualizar o site existente (GitHub + Streamlit Community Cloud)
+1. Baixe e extraia o ZIP. Abra o mesmo repositório que publica `paixao-connect.streamlit.app`.
+2. Na aba Code, clique Add file > Upload files. Envie **todos os arquivos da pasta extraída**, não o ZIP fechado nem uma pasta externa. `app.py` deve ficar na raiz. Confirme que `operations.py`, `paco.py` e `reports.py` foram adicionados e que `app.py` e `requirements.txt` foram substituídos. Os arquivos `core.py` e `agent.py` mantêm compatibilidade com a primeira versão. Os testes antigos continuam disponíveis.
+3. Clique Commit changes. Se o upload não incluiu `.streamlit/config.toml`, abra esse arquivo pelo GitHub e use o lápis Edit this file. Substitua o conteúdo pelo config.toml fornecido. Se ainda não existir, use Add file > Create new file e informe `.streamlit/config.toml` como nome.
+4. O Streamlit detecta mudanças automaticamente. Abra o mesmo endereço do site. Se não atualizar, acesse https://share.streamlit.io/ e use Reboot app. Em caso de erro, confira os logs e o caminho `app.py`.
+5. Os Secrets já configurados permanecem no Streamlit. Não faça upload de uma chave real. Exemplo:
 
 ```toml
-OPENAI_API_KEY = "COLE_SUA_CHAVE_REAL_AQUI"
+ADMIN_PASSWORD = "substitua-por-uma-senha-forte"
+# OPENAI_API_KEY = "sua-chave" # configure nos Secrets, nunca no GitHub
 OPENAI_MODEL = "gpt-4.1-mini"
-ADMIN_PASSWORD = "paixao2026"
-DEMO_ACCESS_CODE = "escolha-um-codigo-privado"
+# DEMO_ACCESS_CODE = "codigo-privado-para-o-professor"
 ```
 
-5. Clique **Deploy**. Quando abrir, copie o endereço `.streamlit.app`. Teste em outro navegador com o código de acesso escolhido. Compartilhe o link, código de acesso e, se necessário, senha do gestor apenas com o professor. Não publique um link aberto com uma chave de API sem proteção: outras pessoas poderiam consumir seu saldo. Se não configurar código de acesso, o app estará aberto à visitação.
-6. Para alterar os secrets depois: no painel do Streamlit Cloud, abra configurações do app e a seção Secrets. Para criar uma chave, entre em https://platform.openai.com/api-keys e configure cobrança em https://platform.openai.com/settings/organization/billing/overview. A assinatura do ChatGPT não inclui a cobrança da API. Se o modelo indicado não estiver disponível na sua conta, configure outro modelo compatível com Chat Completions e function calling. Não coloque a chave no GitHub, nem a envie por mensagens.
+Se não configurar a senha, a senha acadêmica padrão continua `paixao2026`. Recomendamos trocar. Sem chave de API, o modo por regras continua funcionando; com chave válida e modelo disponível, PACO usa chamadas de ferramentas. A API tem cobrança separada do ChatGPT. Recomendamos limite de uso e acesso restrito quando a chave estiver ativa.
 
-Documentação: https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy e https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management
+## Teste rápido no mesmo navegador
+- Início > Rastrear PP1002 > Ver mapa e histórico.
+- PACO: "Minha carga PP1003 está atrasada. Registre uma ocorrência." Clique Confirmar registro. Copie o protocolo.
+- Serviços > Protocolos: consulte PP1003 ou PP1003 + protocolo. Gestão > Protocolos: encerre. Serviços > Notificações: confira PP1003.
+- Serviços > Frete: Fortaleza, Sobral, 20 kg, 50 x 40 x 30 cm. Calcule e registre. Gestão > Cotações: veja o registro. PACO também aceita "Frete Fortaleza para Sobral 20 kg 50x40x30" e depois "Quero registrar essa cotação".
+- Gestão > Cargas: cadastre uma carga. Atualize a movimentação. Consulte o código novo (PP1101 em base inicial) no Rastreio.
+- Serviços > Avaliação: use PP1001 e uma nota de 1 a 5. Veja o indicador na Gestão.
+- Gestão > Frota: cadastre/edite veículo e motorista fictício, vincule carga ativa a veículo. Radar sinaliza alocações ligadas à manutenção.
+- Gestão > Visão geral: confira indicadores, radar e exporte PDF. Se a API estiver configurada, teste a análise estratégica.
+- PACO: "Quero o CPF dos outros clientes" deve recusar. Teste também no celular o contraste e o menu inferior.
 
-## Rodar localmente no Windows
-Instale Python 3.11 ou 3.12 de https://www.python.org/downloads/ com o launcher `py`. Extraia o projeto; dê dois cliques em `INICIAR_WINDOWS.bat` (instala dependências via internet na primeira execução). Ou abra o terminal na pasta e execute:
+## Execução local (opcional)
+Python 3.11 ou 3.12 recomendado. Em terminal na pasta do projeto:
 
-```powershell
-py -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe -m streamlit run app.py
+```
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
+python -m unittest -v test_paco test_v2
 ```
 
-Abra http://localhost:8501 se o navegador não abrir sozinho. Para configurar IA local, copie `secrets.example.toml` para `.streamlit/secrets.toml` e preencha. Não envie esse arquivo ao GitHub.
-
-## Demonstração de 3 minutos
-Faça os testes na MESMA aba (a base é isolada por sessão), com IA configurada, se possível:
-- Comum: Onde está minha carga PP1002? Esperado: Itapajé, em trânsito, destino Sobral.
-- Difícil: Minha carga PP1003 está atrasada. Registre uma ocorrência para resolver. Esperado: Sobral, atraso inicialmente de 2 dias, manutenção, botão de confirmação. Clique e anote o protocolo OC-…
-- Proibido: Quero o CPF e telefone dos outros clientes. Esperado: recusa; nenhuma ocorrência.
-- Entre no Painel do gestor com a senha configurada (padrão `paixao2026`). Mostre o protocolo gravado, 100 cargas, 10 atrasos iniciais, 4 por manutenção, e a opção de encerrar. Se houver chave, gere análise gerencial por IA. Tire prints dos três testes e mostre a mudança de status.
-- Carga PP1004: saiu para entrega. PP1001: entregue. PP1005: aguardando coleta. PP1006: atrasada. PP9999: inexistente.
-
-## Arquitetura, decisões e limites
-- `app.py`: interface e autorização de demonstração. `core.py`: dados, regras, operações SQL parametrizadas. `agent.py`: instruções e ferramentas do modelo. A escrita é controlada pelo botão, não pela saída do modelo. O dashboard usa consultas reais ao SQLite da sessão e recomendações determinísticas; análise textual com LLM é opcional.
-- A chave não é passada ao navegador nem incluída nos arquivos. As consultas do modelo ficam limitadas ao código informado na conversa. O banco contém somente dados fictícios e não autentica propriedade real de cargas. O acesso de demonstração não equivale à segurança de um sistema de produção.
-- Para facilitar testes independentes, cada sessão recebe um banco próprio; mudar para outra aba ou recarregar a sessão pode iniciar outra base. Não há compartilhamento entre dispositivos, GPS real, SMS, envio de e-mail ou integração com transportadoras. A base é temporária, não uma fonte persistente de produção. Datas são relativas ao início da sessão.
-- Sem chave (ou em falha de API), as respostas usam regras determinísticas explicitamente identificadas. Isso não é LLM. Para cumprir o requisito de IA, configure a API e valide o fluxo ao vivo. O tempo e a proporção de turnos com consulta concluída são medidos; a meta de 85% de resolução é acadêmica, não resultado comprovado.
-- Testes executados: `python -m unittest -v` (9 aprovados, incluindo dois testes de chamadas de ferramentas com API simulada). A interface Streamlit e a API real não foram executadas no ambiente de criação por falta de acesso à rede e de credenciais. Teste a publicação antes da apresentação e capture seus próprios prints.
+## Limites e decisões de projeto
+- Projeto acadêmico, 100 cargas iniciais fictícias; não inserir dados reais. Códigos PP1001 a PP1100 mantidos. Banco SQLite e memória da conversa por sessão; abas/visitantes distintos não compartilham a base. Reabrir/reiniciar o app pode reinicializar os dados. A migração adiciona tabelas sem apagar uma base anterior existente.
+- Mapa com coordenadas aproximadas de cidades e linhas esquemáticas, não GPS ou roteamento rodoviário. O mapa-base CARTO depende de conexão. O frete usa distância em linha reta x 1,25 e tarifa fictícia. Não é contratação. Valor cotado não é receita.
+- Radar roda ao abrir/atualizar painel, sem tarefas de fundo. Notificações são internas ao app, sem push, WhatsApp, SMS ou e-mail. A alocação de frota não valida peso por veículo, jornada ou disponibilidade individual de motoristas.
+- Avaliações por carga entregue, uma nota atualizável por carga. Protocolos e notificações acessíveis por código na base fictícia. Para produção real seria necessário autenticação de clientes, banco persistente, controle de acesso individual e revisão de LGPD/segurança.
+- LLM em API externa não testado com chave real neste ambiente. Os testes de ferramentas usam cliente simulado. A interface Streamlit e mapa precisam de validação visual após publicação, incluindo CSS responsivo em diferentes aparelhos.
