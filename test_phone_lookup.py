@@ -53,3 +53,17 @@ class PhoneTests(unittest.TestCase):
         self.assertEqual(len(self.s.all()),100)
     def test_generated_updates_dashboard_and_plan(self):
         lookup(self.s,'(88) 00000-1234');m=self.s.extended();self.assertEqual((m['total'],m['late']),(102,11));self.assertTrue(any('Flamengo' in r['cause'] and 'pausas' in r['action'] for r in self.s.plan()))
+
+    def test_combined_search_code(self):
+        from phone_lookup import search_delivery
+        for raw in ['PP1002','pp-1002','PP 1002']:
+            rows,h,e=search_delivery(self.s,raw);self.assertEqual([d['code'] for d in rows],['PP1002']);self.assertFalse(h or e)
+    def test_combined_search_phones(self):
+        from phone_lookup import search_delivery
+        rows,h,e=search_delivery(self.s,'(88) 00000-1234');self.assertEqual(len(rows),2);self.assertIn('Flamengo',rows[0]['reason']);self.assertFalse(h or e)
+        self.assertEqual([d['code'] for d in search_delivery(self.s,'+55 88 00000-1234')[0]],[d['code'] for d in rows]);self.assertEqual(len(self.s.all()),102)
+    def test_combined_search_errors(self):
+        from phone_lookup import search_delivery
+        for raw,expected in [('', 'telefone'),('ABC123','padrão'),('PP9999','formato correto'),('(88) 12345','DDD'),('1234','padrão')]:
+            rows,h,e=search_delivery(self.s,raw);self.assertFalse(rows);self.assertTrue(h);self.assertIn(expected,e)
+        self.assertEqual(len(self.s.all()),100)

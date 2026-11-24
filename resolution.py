@@ -1,6 +1,6 @@
 """PACO 3.0: auditable complaint workflow, with customer confirmation."""
 from operations import Operations, KINDS, money
-from core import today, now, normalize, forbidden, REFUSAL
+from core import today, now, normalize, forbidden, REFUSAL, delivery_estimate, forecast_text, describe
 from tracking_feedback import tracking_result, chat_tracking_check
 from phone_lookup import chat_phone, HELP
 from delay_scenarios import install, SCENARIOS
@@ -116,6 +116,8 @@ class ResolutionStore(Operations):
                 # During initial migration the table may not yet exist.
                 if c.execute("SELECT 1 FROM sqlite_master WHERE name='confirmed_eta'").fetchone():
                     r=c.execute('SELECT eta FROM confirmed_eta WHERE code=?',(d['code'],)).fetchone();d['confirmed_eta']=r[0] if r else ''
+            d.setdefault('confirmed_eta','')
+            d['estimated_eta']=delivery_estimate(d)
         return d
     def manager_update(self,tid,owner,note,propose=False,new_date=''):
         t=next((x for x in self.cases() if x['id']==tid),None)
@@ -195,6 +197,9 @@ def complaint_reply(text,store,ctx):
     if feedback:return feedback
     if re.search(r'frete|cotacao|orcamento|quanto custa|avali|notific|alerta',s):return None
     code=ctx.get('code','');d=store.get(code) if code else None
+    if re.search(r'previsao|quando.*(?:cheg|entreg)|qual.*(?:data|prazo)|nova data',s) and not re.search(r'reagend|remarc|regist|abrir|reclam|resolv|soluc|priori|urgente',s):
+        if not d:return 'Informe o código da entrega para que eu possa verificar a previsão. '+HELP,None,False
+        return describe(d),None,True
     if re.search(r'reagend|remarc',s) or (ctx.get('reschedule_code')==code and re.search(r'\b\d{4}-\d{2}-\d{2}\b',text)):kind='Reagendamento'
     elif re.search(r'avaria|danific|quebrad|amassad',s):kind='Avaria'
     elif re.search(r'endereco errado|endereco incorreto|endereco diferente',s):kind='Endereço incorreto'
@@ -217,7 +222,8 @@ def complaint_reply(text,store,ctx):
         requested=match[0];ctx.pop('reschedule_code',None)
     priority=classify(kind,d); msg=TYPES[kind][1]+f'\n\n**{code}** · {d["status"]}. Último registro: {d["location"]}.'
     if d['days_late']:msg+=f' Prazo original vencido há {d["days_late"]} dia(s). Motivo registrado: {d["reason"]}.'
-    msg+='\n\n'+('Nova previsão registrada: '+d['confirmed_eta']+'.' if d.get('confirmed_eta') else 'Não há nova previsão confirmada.')
+    forecast=forecast_text(d)
+    if forecast:msg+='\n\n**'+forecast+'**'
     msg+=f'\n\nPreparei um chamado de **{kind}**, prioridade **{priority}**, com meta de primeiro retorno de {SLA[priority]} h na simulação. Confirme abaixo para registrar. Isso não garante a resolução nesse prazo.'
     if kind=='Avaria':msg+=' Você também pode abrir o chamado na Central de ajuda e anexar fotos.'
     return msg,dict(code=code,kind=kind,requested_date=requested),False

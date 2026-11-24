@@ -88,12 +88,38 @@ class Store:
             n,res,avg=c.execute('SELECT COUNT(*),COALESCE(SUM(resolved),0),COALESCE(AVG(seconds),0) FROM interactions').fetchone()
         return {'total':len(rows),'delivered':counts['Entregue'],'active':len(rows)-counts['Entregue']-len(late),'late':len(late),'reasons':dict(reasons),'open_tickets':sum(t['status']=='Aberto' for t in self.tickets()),'interactions':n,'resolved':res,'avg_seconds':round(avg,2)}
 
+def delivery_estimate(d):
+    """Deterministic fictional forecast, preserving the original deadline.
+    A confirmed future date overrides it; an expired estimate advances only
+    on reaching its date. No real operational data is used.
+    """
+    if d['status']!='Atrasada':return ''
+    if d.get('confirmed_eta') and date.fromisoformat(d['confirmed_eta'])>=today():return ''
+    interval=1+int(d['code'][2:])%3
+    anchor=max(date.fromisoformat(d['eta']),date.fromisoformat(d['updated'][:10]))
+    if d.get('confirmed_eta'):anchor=max(anchor,date.fromisoformat(d['confirmed_eta']))
+    elapsed=max(0,(today()-anchor).days)
+    return (anchor+timedelta(days=interval*(elapsed//interval+1))).isoformat()
+
+def forecast_text(d):
+    """One shared customer-facing forecast for all surfaces."""
+    if d['status']=='Entregue':return ''
+    confirmed=d.get('confirmed_eta','')
+    estimate=d.get('estimated_eta') or delivery_estimate(d)
+    if confirmed and date.fromisoformat(confirmed)>=today():
+        return 'Nova previsão confirmada: '+date.fromisoformat(confirmed).strftime('%d/%m/%Y')
+    if estimate:
+        previous=('Previsão anterior vencida: '+date.fromisoformat(confirmed).strftime('%d/%m/%Y')+'. ' if confirmed else '')
+        return previous+'Nova previsão estimada: '+date.fromisoformat(estimate).strftime('%d/%m/%Y')+' (estimativa simulada, sujeita à confirmação da logística).'
+    return ''
+
 def describe(d):
     eta=date.fromisoformat(d['eta']).strftime('%d/%m/%Y')
     msg=f"**Carga {d['code']} — {d['status']}**\n\n- Rota: {d['origin']} → {d['destination']}\n- Última localização registrada: {d['location']}\n- Prazo original: {eta}"
     if d['days_late']: msg+=f"\n- Atraso em relação ao prazo original: {d['days_late']} dia(s). Motivo: {d['reason']}."
-    if d.get('confirmed_eta'):msg+='\n- Nova previsão confirmada: '+date.fromisoformat(d['confirmed_eta']).strftime('%d/%m/%Y')
-    elif d['days_late']:msg+='\n\nAinda não temos uma nova previsão confirmada. Sentimos muito pela demora. Posso preparar uma ocorrência para a equipe avaliar.'
+    forecast=forecast_text(d)
+    if forecast:msg+='\n- '+forecast
+    if d['status']=='Atrasada':msg+='\n\nSentimos muito pela demora. Posso preparar uma ocorrência para a equipe avaliar.'
     return msg
 
 def forbidden(text):

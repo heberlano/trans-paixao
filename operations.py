@@ -1,6 +1,6 @@
 """Extended business tools. All data and prices are simulated."""
 from tracking_feedback import chat_tracking_check
-from core import Store, canonical, today, now, normalize, codes, describe, forbidden, REFUSAL, demo_reply
+from core import Store, canonical, today, now, normalize, codes, describe, forbidden, REFUSAL, demo_reply, forecast_text
 from datetime import date, datetime, timedelta
 from collections import Counter, defaultdict
 import math, re, secrets
@@ -64,7 +64,7 @@ class Operations(Store):
         if not d:return []
         with self.connect() as c:out=[dict(r) for r in c.execute('SELECT message,created FROM notices WHERE code=? ORDER BY id DESC',(d['code'],))]
         out.append({'message':f"Última situação: {d['status']} · {d['location']}",'created':d['updated']})
-        if d['days_late']:out.insert(0,{'message':f"Prazo original vencido há {d['days_late']} dia(s). {d['reason']}",'created':now()})
+        if d['days_late']:out.insert(0,{'message':f"Prazo original vencido há {d['days_late']} dia(s). {d['reason']}. {forecast_text(d)}",'created':now()})
         return out
     def create_cargo(self,origin,destination,eta,vehicle=''):
         if origin not in CITIES or destination not in CITIES or origin==destination:raise ValueError('Origem e destino inválidos.')

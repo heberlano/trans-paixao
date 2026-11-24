@@ -49,6 +49,18 @@ def lookup(store,raw):
                 c.execute('INSERT INTO demo_phone_cargo VALUES(?,?)',(digest,code))
     return [store.get(code) for code in ids],''
 
+def search_delivery(store,raw):
+    """One search field: identify phone or tracking code without retaining raw input."""
+    from tracking_feedback import tracking_result
+    raw=str(raw or '').strip()
+    if not raw:
+        return [],'Como podemos localizar sua entrega?','Informe o código de rastreio ou, se não souber, um telefone fictício com DDD.'
+    if phone_key(raw) or (re.fullmatch(r'[\d\s()+.-]+',raw) and (len(re.sub(r'\D','',raw))>=5 or raw.startswith(('(', '+')))):
+        rows,error=lookup(store,raw)
+        return rows,('Vamos conferir seu telefone?' if error else ''),error
+    cargo,heading,message=tracking_result(store,raw)
+    return ([cargo] if cargo else []),heading,message
+
 def redact(text):
     return re.sub(PHONE_PATTERN,'[telefone informado]',text)
 

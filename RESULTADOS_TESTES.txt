@@ -1,3 +1,10 @@
+test_all_delayed_have_future_estimate (test_forecast.ForecastTests.test_all_delayed_have_future_estimate) ... ok
+test_chat_forecast_not_complaint (test_forecast.ForecastTests.test_chat_forecast_not_complaint) ... ok
+test_complaint_and_notice_forecast (test_forecast.ForecastTests.test_complaint_and_notice_forecast) ... ok
+test_confirmation_precedence_and_original (test_forecast.ForecastTests.test_confirmation_precedence_and_original) ... ok
+test_delivered_no_prediction (test_forecast.ForecastTests.test_delivered_no_prediction) ... ok
+test_expired_confirmed_and_estimate (test_forecast.ForecastTests.test_expired_confirmed_and_estimate) ... ok
+test_phone_generated_and_stable (test_forecast.ForecastTests.test_phone_generated_and_stable) ... ok
 test_ai_scope_mock (test_paco.PacoTests.test_ai_scope_mock) ... ok
 test_ai_tools_mock (test_paco.PacoTests.test_ai_tools_mock) ... ok
 test_confirmation_and_duplicate (test_paco.PacoTests.test_confirmation_and_duplicate) ... ok
@@ -8,6 +15,9 @@ test_refusal (test_paco.PacoTests.test_refusal) ... ok
 test_seed (test_paco.PacoTests.test_seed) ... ok
 test_tracking (test_paco.PacoTests.test_tracking) ... ok
 test_chat_select_then_complain (test_phone_lookup.PhoneTests.test_chat_select_then_complain) ... ok
+test_combined_search_code (test_phone_lookup.PhoneTests.test_combined_search_code) ... ok
+test_combined_search_errors (test_phone_lookup.PhoneTests.test_combined_search_errors) ... ok
+test_combined_search_phones (test_phone_lookup.PhoneTests.test_combined_search_phones) ... ok
 test_examples (test_phone_lookup.PhoneTests.test_examples) ... ok
 test_fixed_funny_and_no_overwrite (test_phone_lookup.PhoneTests.test_fixed_funny_and_no_overwrite) ... ok
 test_format (test_phone_lookup.PhoneTests.test_format) ... ok
@@ -63,6 +73,6 @@ test_refuse (test_v2.V2Tests.test_refuse) ... ok
 test_seed_and_migration (test_v2.V2Tests.test_seed_and_migration) ... ok
 
 ----------------------------------------------------------------------
-Ran 63 tests in 2.610s
+Ran 73 tests in 2.552s
 
 OK
