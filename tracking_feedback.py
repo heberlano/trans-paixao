@@ -2,8 +2,8 @@
 import re
 import unicodedata
 
-FORMAT = 'Desculpe, mas o código informado não corresponde ao padrão de rastreamento utilizado pela Transportadora Paixão. Nossos códigos começam com as letras PP, seguidas de quatro números (ex.: PP1002). Confira o código no comprovante de envio e tente novamente. Se precisar, o PACO está à disposição para ajudar!'
-MISSING = 'Sentimos muito! O código informado está no formato correto, mas não conseguimos localizar uma entrega vinculada a ele em nosso sistema. Pode ter ocorrido um erro de digitação ou a carga ainda não ter sido cadastrada. Confira o código no comprovante de envio e tente novamente. Se o problema persistir, estamos à disposição para orientar você.'
+FORMAT = 'Desculpe, mas o código informado não corresponde ao padrão de rastreamento utilizado pela Transportadora Paixão. Nossos códigos começam com as letras PP, seguidas de quatro números (ex.: PP1002). Confira o código no comprovante de envio e tente novamente. Se não souber o código, use a busca pelo telefone com DDD vinculado à compra. O PACO está à disposição para ajudar!'
+MISSING = 'Sentimos muito! O código informado está no formato correto, mas não conseguimos localizar uma entrega vinculada a ele em nosso sistema. Pode ter ocorrido um erro de digitação ou a carga ainda não ter sido cadastrada. Confira o código no comprovante de envio e tente novamente. Se não souber o código, procure a entrega pelo telefone com DDD vinculado à compra. Estamos à disposição para orientar você.'
 EMPTY = 'Precisamos do seu código para localizar a entrega. Digite o código de rastreamento informado no momento do envio da mercadoria. Ele começa com PP, seguido de quatro números. Exemplo: PP1002.'
 MULTIPLE = 'Para ajudar você com segurança, vamos consultar uma entrega por vez. Qual código deseja consultar primeiro?'
 

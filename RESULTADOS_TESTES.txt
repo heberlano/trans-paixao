@@ -7,6 +7,22 @@ test_metrics (test_paco.PacoTests.test_metrics) ... ok
 test_refusal (test_paco.PacoTests.test_refusal) ... ok
 test_seed (test_paco.PacoTests.test_seed) ... ok
 test_tracking (test_paco.PacoTests.test_tracking) ... ok
+test_chat_select_then_complain (test_phone_lookup.PhoneTests.test_chat_select_then_complain) ... ok
+test_examples (test_phone_lookup.PhoneTests.test_examples) ... ok
+test_fixed_funny_and_no_overwrite (test_phone_lookup.PhoneTests.test_fixed_funny_and_no_overwrite) ... ok
+test_format (test_phone_lookup.PhoneTests.test_format) ... ok
+test_generated_cargo_no_duplicates (test_phone_lookup.PhoneTests.test_generated_cargo_no_duplicates) ... ok
+test_generated_updates_dashboard_and_plan (test_phone_lookup.PhoneTests.test_generated_updates_dashboard_and_plan) ... ok
+test_invalid_phone_does_not_create (test_phone_lookup.PhoneTests.test_invalid_phone_does_not_create) ... ok
+test_missing_tracking (test_phone_lookup.PhoneTests.test_missing_tracking) ... ok
+test_new_phone_funny_reason_and_case (test_phone_lookup.PhoneTests.test_new_phone_funny_reason_and_case) ... ok
+test_number_not_stored_in_plaintext (test_phone_lookup.PhoneTests.test_number_not_stored_in_plaintext) ... ok
+test_phone_persists_and_selection (test_phone_lookup.PhoneTests.test_phone_persists_and_selection) ... ok
+test_privacy (test_phone_lookup.PhoneTests.test_privacy) ... ok
+test_quote_no_false_phone (test_phone_lookup.PhoneTests.test_quote_no_false_phone) ... ok
+test_second_phone_distinct_and_grandma (test_phone_lookup.PhoneTests.test_second_phone_distinct_and_grandma) ... ok
+test_unknown_clears_memory (test_phone_lookup.PhoneTests.test_unknown_clears_memory) ... ok
+test_wrong_phone (test_phone_lookup.PhoneTests.test_wrong_phone) ... ok
 test_audit (test_resolution.ResolutionTests.test_audit) ... ok
 test_chat_triage (test_resolution.ResolutionTests.test_chat_triage) ... ok
 test_duplicate_across_stages (test_resolution.ResolutionTests.test_duplicate_across_stages) ... ok
@@ -47,6 +63,6 @@ test_refuse (test_v2.V2Tests.test_refuse) ... ok
 test_seed_and_migration (test_v2.V2Tests.test_seed_and_migration) ... ok
 
 ----------------------------------------------------------------------
-Ran 47 tests in 1.806s
+Ran 63 tests in 2.610s
 
 OK

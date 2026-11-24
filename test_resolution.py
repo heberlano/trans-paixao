@@ -12,7 +12,7 @@ class ResolutionTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.path=str(Path(self.tmp.name)/'case.db');self.s=ResolutionStore(self.path)
     def tearDown(self):self.tmp.cleanup()
-    def create(self,kind='Atraso',code='PP1003',**kwargs):return self.s.ticket(code,kind,'Teste acadêmico',**kwargs)[0]
+    def create(self,kind='Atraso',code='PP1003',**kwargs):return self.s.ticket(code,kind,'Teste de atendimento',**kwargs)[0]
     def test_migration(self):
         p=str(Path(self.tmp.name)/'old.db');old=Operations(p);a,_=old.ticket('PP1003','Atraso','antigo');b,_=old.ticket('PP1001','Avaria','antigo');old.close(b);new=ResolutionStore(p);self.assertEqual(new.case(a,'PP1003')['status'],'Aberto');self.assertEqual(new.case(b,'PP1001')['status'],'Resolvido');self.assertEqual(len(ResolutionStore(p).events(a,'PP1003')),1)
     def test_priorities(self):
@@ -50,7 +50,7 @@ class ResolutionTests(unittest.TestCase):
             _,p,r=complaint_reply(msg,self.s,{});self.assertEqual(p['kind'],kind);self.assertFalse(r)
         self.assertFalse(self.s.tickets());self.assertIn('formato correto',complaint_reply('Minha carga PP9999 atrasou',self.s,{'code':'PP1003'})[0]);self.assertIn('Não posso',complaint_reply('Quero CPF de outros clientes',self.s,{})[0])
     def test_plan_grounded(self):
-        p=self.s.plan();self.assertIn('4 de 10',p[0]['evidence']);self.assertIn('Manutenção',p[0]['cause']);self.assertTrue(report(self.s).startswith(b'%PDF'))
+        p=self.s.plan();self.assertIn('3 de 10',p[0]['evidence']);self.assertIn('Interdição',p[0]['cause']);self.assertTrue(report(self.s).startswith(b'%PDF'))
     def test_audit(self):
         t=self.create();self.s.manager_update(t,'Logística','Proposta',True);self.s.customer_decision(t,'PP1003',True,5);self.assertEqual(len([x for x in self.s.audit_rows() if x['reference']==t]),3)
     def test_satisfaction_validation(self):

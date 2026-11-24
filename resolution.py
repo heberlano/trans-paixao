@@ -2,6 +2,8 @@
 from operations import Operations, KINDS, money
 from core import today, now, normalize, forbidden, REFUSAL
 from tracking_feedback import tracking_result, chat_tracking_check
+from phone_lookup import chat_phone, HELP
+from delay_scenarios import install, SCENARIOS
 from datetime import datetime, timedelta, date
 from collections import Counter
 from io import BytesIO
@@ -47,6 +49,7 @@ class ResolutionStore(Operations):
             CREATE TABLE IF NOT EXISTS confirmed_eta(code TEXT PRIMARY KEY, eta TEXT);''')
             for t in c.execute('SELECT * FROM tickets WHERE id NOT IN (SELECT id FROM case_meta)').fetchall():
                 self._init_case(c,dict(t),classify(t['kind'],self.get(t['code'])), '', 'Migração')
+        install(self)
     def _event(self,c,tid,event,detail,actor):
         c.execute('INSERT INTO case_events(id,event,detail,actor,created) VALUES(?,?,?,?,?)',(tid,event,detail[:700],actor,now()))
     def _audit(self,c,actor,action,ref,result):
@@ -170,6 +173,7 @@ class ResolutionStore(Operations):
         return dict(total=len(rows),closed=len(closed),pending=len(rows)-len(closed),breached=sum(t['sla']=='Fora da meta' for t in rows),rate=round(100*len(closed)/len(rows),1) if rows else None,mean_hours=round(sum(times)/len(times),2) if times else None,satisfaction=round(sum(rated)/len(rated),2) if rated else None,reopened=sum(t['reopen_count'] for t in rows),sla_rate=round(100*sum(t['sla']=='Respondido no prazo' for t in replies)/len(replies),1) if replies else None,kinds=dict(Counter(t['kind'] for t in rows)))
     def plan(self):
         m=self.extended(); out=[];total=sum(m['reasons'].values()); actions={'Manutenção do veículo':'Revisar histórico de falhas e programar manutenção preventiva.','Interdição na rota':'Revisar rotas alternativas e margens de prazo.','Falha operacional':'Mapear etapas de coleta e expedição; conferir responsáveis.','Condições climáticas':'Revisar previsões e margens de segurança, sem comprometer a segurança da viagem.'}
+        actions.update(dict(SCENARIOS))
         for reason,n in sorted(m['reasons'].items(),key=lambda x:-x[1]):out.append(dict(cause=reason,evidence=f'{n} de {total} atrasos atuais ({100*n/max(total,1):.1f}%)',action=actions.get(reason,'Investigar a causa antes de definir ações.'),owner='Gestão logística',target='Reavaliar em 30 dias; meta proposta: reduzir a ocorrência em 25%.'))
         overdue=[t for t in self.cases() if t['sla']=='Fora da meta' and t['status'] in ACTIVE]
         if overdue:out.insert(0,dict(cause='SLA fora da meta',evidence=f'{len(overdue)} chamados pendentes fora da meta de retorno',action='Revisar fila e priorizar casos críticos.',owner='Atendimento',target='Revisar hoje.'))
@@ -182,6 +186,8 @@ class ResolutionStore(Operations):
 def complaint_reply(text,store,ctx):
     """Deterministic triage before optional LLM, with explicit confirmation."""
     s=normalize(text)
+    phone=chat_phone(text,store,ctx)
+    if phone is not None:return phone
     # Address complaints are safe; never allow private-data or financial requests.
     cleaned=re.sub(r'(endereco errado|endereco incorreto|endereco diferente)', '',s)
     if forbidden(cleaned):return REFUSAL,None,False
@@ -197,7 +203,7 @@ def complaint_reply(text,store,ctx):
     elif re.search(r'priori|urgente|urgencia',s):kind='Prioridade'
     elif re.search(r'atras|reclam|ocorrencia|chamado|resolv|soluc',s) and not re.search(r'consult|acompan|qual.*protocolo|status.*chamado|qual.*motivo|por que|porque|quantos dias',s):kind='Atraso' if ('atras' in s or d and d['days_late']) else 'Reclamação'
     else:return None
-    if not d:return 'Sinto muito pela dificuldade. Para verificar sua entrega, informe o código de rastreio que começa com PP (ex.: PP1003).',None,False
+    if not d:return 'Sinto muito pela dificuldade. Informe o código de rastreio (ex.: PP1003). '+HELP,None,False
     requested=''
     if kind=='Reagendamento':
         if d['status']=='Entregue':return 'Essa carga já consta como entregue. Se houver um problema, podemos abrir uma reclamação.',None,False

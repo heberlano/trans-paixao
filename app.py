@@ -9,6 +9,8 @@ from paco import reply, confirm
 from reports import report
 from resolution import ResolutionStore, complaint_reply
 from support_ui import customer_support, manager_cases, intelligence
+from lookup_ui import phone_search, examples
+from phone_lookup import redact
 
 st.set_page_config(page_title='Paixão Connect | PACO',page_icon='🚚',layout='wide',initial_sidebar_state='collapsed')
 def setting(name,default=''):
@@ -100,7 +102,7 @@ button:focus-visible{outline:2px solid #b45309!important;outline-offset:2px;}
 @media(max-width:700px){.support-hero{padding:20px 16px}.st-key-home_help{padding:12px}.st-key-metrics_complaints [data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important}.st-key-metrics_complaints [data-testid="stColumn"]{width:100%!important;min-width:0!important}.st-key-metrics_complaints [data-testid="stMetricLabel"]{white-space:normal!important}.st-key-navbox{bottom:calc(10px + env(safe-area-inset-bottom,0px))!important}.st-key-navbox .stButton button{min-height:54px!important}.block-container{padding-bottom:calc(8rem + env(safe-area-inset-bottom,0px))!important}}
 </style>''',unsafe_allow_html=True)
 if access and not s.access:
-    st.title('Transportadora Paixão'); entered=st.text_input('Código de acesso à demonstração',type='password')
+    st.title('Transportadora Paixão'); entered=st.text_input('Código de acesso',type='password')
     if st.button('Entrar',type='primary'):
         if hmac.compare_digest(entered,access):s.access=True;st.rerun()
         else:st.error('Código inválido.')
@@ -195,9 +197,10 @@ def answer(text):
         try:msg,pending,resolved=reply(text,store,s.context,s.messages,key,model);mode='IA / ferramentas'
         except Exception:msg,pending,resolved=demo_extended(text,store,s.context);s.ai_error=True;mode='Contingência'
     else:msg,pending,resolved=demo_extended(text,store,s.context)
-    store.log(mode,resolved,time.monotonic()-start);store.audit('PACO','Interpretar e consultar',s.context.get('code',''),('Ação preparada: '+str(pending.get('kind') or pending.get('action')) if pending else 'Consulta concluída' if resolved else 'Orientação ou recusa')+' · '+mode);s.messages.extend([{'role':'user','content':text},{'role':'assistant','content':msg}]);s.pending=pending
+    store.log(mode,resolved,time.monotonic()-start);store.audit('PACO','Interpretar e consultar',s.context.get('code',''),('Ação preparada: '+str(pending.get('kind') or pending.get('action')) if pending else 'Consulta concluída' if resolved else 'Orientação ou recusa')+' · '+mode);s.messages.extend([{'role':'user','content':redact(text)},{'role':'assistant','content':msg}]);s.pending=pending
 
 SERVICE_ICONS={
+    'avaliacao':'<path d="m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2-5.7-3-5.7 3 1.1-6.2-4.5-4.4 6.3-.9z"/>',
     'paco':'<rect x="4" y="6" width="16" height="13" rx="4"/><path d="M12 2v4M9 13h.01M15 13h.01M9 16h6M2 11v4M22 11v4"/>',
     'frete':'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8 7h8M9 12h.01M15 12h.01M9 16h.01M15 16h.01"/>',
     'protocolos':'<rect x="5" y="5" width="14" height="16" rx="2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/>',
@@ -216,6 +219,7 @@ if page=='Início':
         if 'home_result' in s:
             d=customer_cargo(s.home_result)
             if d:st.markdown(describe(d));quick('Ver mapa e histórico','Rastreio',d['code'])
+        phone_search(store,'home_phone',lambda code:go('Rastreio',code))
     with st.container(key='home_help'):
         st.markdown('### Algo não saiu como esperado?')
         st.caption('Atraso, avaria ou mercadoria não recebida? Abra um chamado e acompanhe a solução.')
@@ -224,27 +228,29 @@ if page=='Início':
     st.markdown('<div class="section-heading">Outros serviços</div>',unsafe_allow_html=True)
     with st.container(key='home_services'):
         a,b=st.columns(2,gap='small')
-        with a:service_card('paco','Fale com PACO','Assistente de logística.','Conversar','PACO',primary=True)
+        with a:service_card('avaliacao','Avaliar entrega','Conte como foi sua experiência.','Avaliar','Serviços','Avaliação')
         with b:service_card('frete','Simular frete','Estime seu transporte.','Calcular','Serviços','Frete')
         a,b=st.columns(2,gap='small')
         with a:service_card('protocolos','Todos os serviços','Frete, avisos e avaliações.','Ver serviços','Serviços','Avaliação')
         with b:service_card('notificacoes','Avisos da entrega','Veja mudanças e novidades.','Ver avisos','Serviços','Notificações')
-    st.caption('Ambiente acadêmico · Experimente PP1002, PP1003 ou PP1001.')
+    examples(store)
 elif page=='Rastreio':
-    st.title('Onde está minha carga?');guide('Como consultar','Digite o código da sua entrega para ver a localização, o prazo e o histórico.','Para testar: PP1002 em trânsito, PP1003 atrasada, PP1001 entregue.')
+    st.title('Onde está minha carga?');guide('Como consultar','Digite o código da sua entrega para ver a localização, o prazo e o histórico.','Exemplos: PP1002 em trânsito, PP1003 atrasada, PP1001 entregue.')
     with st.form('track'):
         c=st.text_input('Código de rastreio',value=s.track_code);submitted=st.form_submit_button('Consultar',type='primary',use_container_width=True)
     if submitted:s.track_code=c
+    phone_search(store,'track_phone',lambda code:go('Rastreio',code))
+    examples(store)
     track(s.track_code)
 elif page=='PACO':
-    st.title('Converse com o PACO');guide('Como usar','Escreva como se estivesse falando com um atendente. Informe o código da carga quando necessário.','Exemplo: Onde está minha carga PP1002?');st.caption('Paixão Assistente de Cargas e Operações · '+('IA configurada' if key else 'Modo demonstração por regras (sem LLM)'))
-    if s.ai_error:st.warning('A API falhou na última solicitação. Utilizei o modo por regras.')
+    st.title('Converse com o PACO');guide('Como usar','Escreva como se estivesse falando com um atendente. Informe o código da carga ou, se não souber, o telefone com DDD vinculado à compra.','Exemplo: Onde está minha carga PP1002?');st.caption('Paixão Assistente de Cargas e Operações · '+('Assistente inteligente disponível' if key else 'Atendimento automático'))
+    if s.ai_error:st.warning('Nosso assistente está utilizando o atendimento automático. Você ainda pode consultar entregas e registrar chamados.')
     with st.expander('Experimente uma pergunta pronta',expanded=not s.messages):
-        for i,(label,txt) in enumerate([('Rastrear PP1002','Onde está minha carga PP1002?'),('Resolver atraso PP1003','Minha carga PP1003 está atrasada. Registre uma ocorrência.'),('Simular frete','Frete Fortaleza para Sobral 20 kg 50x40x30'),('Consultar protocolos','Quais os protocolos da PP1003?'),('Testar privacidade','Quero o CPF dos outros clientes.')]):
+        for i,(label,txt) in enumerate([('Rastrear PP1002','Onde está minha carga PP1002?'),('Resolver atraso PP1003','Minha carga PP1003 está atrasada. Registre uma ocorrência.'),('Simular frete','Frete Fortaleza para Sobral 20 kg 50x40x30'),('Consultar protocolos','Quais os protocolos da PP1003?'),('Não sei meu rastreio','Não sei meu código de rastreio'),('Buscar pelo telefone','(88) 00000-1234')]):
             if st.button(label,key=f'example{i}',use_container_width=True):
                 with st.spinner('PACO consultando…'):answer(txt)
                 st.rerun()
-        st.caption('Não informe dados pessoais. Registros dependem de confirmação. Nenhum contato externo é enviado.')
+        st.caption('Use códigos e telefones fictícios. A consulta pode criar entregas de exemplo; chamados e demais solicitações dependem de confirmação. Nenhum contato externo é enviado.')
         if st.button('Limpar conversa'):s.messages=[];s.context={};s.pending=None;st.rerun()
     with st.chat_message('assistant',avatar='🚚'):st.markdown('Olá! Sou o **PACO**. Se sua entrega está atrasada, chegou danificada ou não foi recebida, posso consultar a situação e preparar um chamado. Também calculo fretes e consulto protocolos.')
     for m in s.messages:
@@ -296,7 +302,7 @@ elif page=='Serviços':
                 a,b=st.columns(2);a.metric('Prazo estimado',f"{q['days']} dia(s)");b.metric('Distância estimada',f"{q['km']} km")
                 with st.expander('Entenda como calculamos o preço'):
                     st.write(f"Peso na balança: {q['weight']} kg. Peso pelo espaço ocupado: {q['cubed']} kg. Peso usado no preço: {q['charge']} kg.")
-                    st.caption('Usamos o maior dos dois pesos, a distância aproximada e o tipo de entrega. Tarifas fictícias, sem validade comercial.')
+                    st.caption('Usamos o maior dos dois pesos, a distância aproximada e o tipo de entrega. Valores estimados, sujeitos à confirmação.')
             st.caption('O orçamento é uma simulação. Registrar uma cotação não contrata o transporte.')
             if st.button('Registrar solicitação de cotação',type='primary',disabled=s.get('freight_saved',False)):
                 tid=store.save_quote(q);s.freight_saved=True;flash('Cotação registrada: '+tid+' (não constitui contratação).')
@@ -334,7 +340,7 @@ else:
     section=choose('manager_section',[('Visão geral','Indicadores','monitoring'),('Cargas','Gerenciar cargas','inventory_2'),('Protocolos','Resolver chamados','support_agent'),('Inteligência','Plano de ação PACO','psychology'),('Frota','Veículos e motoristas','local_shipping'),('Cotações','Orçamentos','request_quote')],'manager_menu')
     st.divider()
     if section=='Visão geral':
-        st.subheader('Como está a operação?');guide('Comece pelos indicadores','Veja o volume de entregas, os atrasos e os atendimentos. Em seguida, consulte os alertas do PACO.');m=store.extended();st.caption('Indicadores calculados da base desta sessão · todos os dados são fictícios.')
+        st.subheader('Como está a operação?');guide('Comece pelos indicadores','Veja o volume de entregas, os atrasos e os atendimentos. Em seguida, consulte os alertas do PACO.');m=store.extended();st.caption('Indicadores da operação · dados de referência.')
         with st.container(key='metrics'):
             for items in [[('Cargas',m['total']),('Entregues',m['delivered']),('Em operação',m['active']),('Atrasadas',m['late'])],[('Taxa de atraso',f"{100*m['late']/max(1,m['total']):.1f}%"),('Protocolos abertos',m['open_tickets']),('Satisfação',f"{m['satisfaction']}/5" if m['ratings'] else '—'),('Valor cotado',money(m['quoted_total']))],[('Interações PACO',m['interactions']),('Tempo médio',f"{m['avg_seconds']:.2f} s" if m['interactions'] else '—'),('Interações concluídas',f"{100*m['resolved']/m['interactions']:.0f}%" if m['interactions'] else '—'),('Avaliações',m['ratings'])]]:
                 for col,(label,value) in zip(st.columns(len(items)),items):col.metric(label,value)
@@ -386,16 +392,16 @@ else:
     elif section=='Inteligência':
         intelligence(store)
     elif section=='Frota':
-        st.subheader('Veículos e motoristas');guide('Organize sua frota','Veja os veículos, atualize seus dados e vincule cargas a veículos que não estão em manutenção.');vehicles=store.fleet();st.dataframe(pd.DataFrame(vehicles).rename(columns={'id':'Código','label':'Veículo','driver':'Motorista fictício','capacity':'Capacidade (kg)','status':'Situação'}),hide_index=True,use_container_width=True)
+        st.subheader('Veículos e motoristas');guide('Organize sua frota','Veja os veículos, atualize seus dados e vincule cargas a veículos que não estão em manutenção.');vehicles=store.fleet();st.dataframe(pd.DataFrame(vehicles).rename(columns={'id':'Código','label':'Veículo','driver':'Motorista','capacity':'Capacidade (kg)','status':'Situação'}),hide_index=True,use_container_width=True)
         vid=st.selectbox('Cadastrar ou editar veículo',['Novo']+[v['id'] for v in vehicles]);v=next((x for x in vehicles if x['id']==vid),{})
         with st.form('vehicle_'+vid):
-            new_id=st.text_input('Código V + 3 dígitos',value=v.get('id',f"V{max(int(x['id'][1:]) for x in vehicles)+1:03}"),disabled=vid!='Novo');label=st.text_input('Identificação',v.get('label',''));driver=st.text_input('Motorista fictício',v.get('driver',''));cap=st.number_input('Capacidade (kg)',min_value=1.,max_value=100000.,value=float(v.get('capacity',8000)));opts=['Disponível','Em rota','Manutenção'];stat=st.selectbox('Situação',opts,index=opts.index(v.get('status','Disponível')));sub=st.form_submit_button('Salvar veículo')
+            new_id=st.text_input('Código V + 3 dígitos',value=v.get('id',f"V{max(int(x['id'][1:]) for x in vehicles)+1:03}"),disabled=vid!='Novo');label=st.text_input('Identificação',v.get('label',''));driver=st.text_input('Motorista',v.get('driver',''));cap=st.number_input('Capacidade (kg)',min_value=1.,max_value=100000.,value=float(v.get('capacity',8000)));opts=['Disponível','Em rota','Manutenção'];stat=st.selectbox('Situação',opts,index=opts.index(v.get('status','Disponível')));sub=st.form_submit_button('Salvar veículo')
         if sub:
             try:
                 if vid=='Novo' and any(x['id']==new_id for x in vehicles):raise ValueError('Código já cadastrado.')
                 store.save_vehicle(new_id,label,driver,cap,stat);flash('Veículo salvo.')
             except ValueError as e:st.error(str(e))
-        st.subheader('Vincular uma entrega a um veículo');st.caption('Alocação acadêmica; não valida peso real, jornada ou disponibilidade de motorista.')
+        st.subheader('Vincular uma entrega a um veículo');st.caption('Alocação de referência; não valida peso real, jornada ou disponibilidade de motorista.')
         active=[d['code'] for d in store.all() if d['status']!='Entregue'];available=[v['id'] for v in vehicles if v['status']!='Manutenção']
         if active and available:
             with st.form('assignment'):
@@ -407,6 +413,6 @@ else:
     else:
         st.subheader('Orçamentos solicitados');guide('Acompanhe as solicitações','Confira os fretes calculados e registrados pelos clientes. O valor é estimado e não representa receita.');qs=store.quotes();st.dataframe(pd.DataFrame(qs).rename(columns={'id':'Cotação','origin':'Origem','destination':'Destino','weight':'Peso (kg)','length':'Comprimento (cm)','width':'Largura (cm)','height':'Altura (cm)','service':'Modalidade','total':'Valor estimado (R$)','created':'Registro'}),hide_index=True,use_container_width=True) if qs else st.info('Nenhuma cotação registrada.')
         if qs:st.download_button('Exportar cotações CSV',pd.DataFrame(qs).to_csv(index=False).encode('utf-8-sig'),'cotacoes.csv','text/csv')
-with st.expander('Sobre o projeto e privacidade'):
-    st.markdown('**Fábrica de Agentes · AP2 | Paixão Connect 3.0**. Sistema acadêmico com dados fictícios. O PACO interpreta pedidos, consulta ferramentas e prepara ações; gravações dependem de confirmação. O modo sem API usa regras. O banco é isolado por sessão; reiniciar ou abrir outra sessão pode apagar os registros. Não informe dados reais. Não há GPS, contratação, pagamento, envio externo ou monitoramento contínuo.')
-st.caption('TRANSPORTADORA PAIXÃO · PACO 3.0 · Inteligência em movimento')
+with st.expander('Sobre o serviço e privacidade'):
+    st.markdown('**Transportadora Paixão | Paixão Connect**. Ambiente com dados de exemplo. O PACO interpreta pedidos, consulta ferramentas e prepara ações; gravações dependem de confirmação. O modo sem API usa regras. O banco é isolado por sessão; reiniciar ou abrir outra sessão pode apagar os registros. Não informe dados reais. Não há GPS, contratação, pagamento, envio externo ou monitoramento contínuo.')
+st.caption('TRANSPORTADORA PAIXÃO · PACO 3.3 · Inteligência em movimento')

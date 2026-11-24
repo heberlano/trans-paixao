@@ -1,6 +1,7 @@
 """Guided customer and manager screens for Paixão Connect 3.0."""
 from datetime import datetime, timedelta
 import streamlit as st
+from lookup_ui import phone_search
 import pandas as pd
 from core import today
 from operations import money
@@ -47,14 +48,15 @@ def customer_support(store,s,go,flash,choose):
     if task=='new':
         st.subheader('1. O que aconteceu com sua entrega?')
         if s.get('case_kind') not in TYPES:s.case_kind='Atraso'
-        def set_kind(k):s.case_kind=k
-        with st.container(key='problem_cards'):
-            for k,(label,_) in TYPES.items():
-                st.button(label,key='case_kind_'+k,icon=':material/chevron_right:',type='primary' if s.case_kind==k else 'secondary',on_click=set_kind,args=(k,),use_container_width=True)
-        kind=s.case_kind;st.info(TYPES[kind][1])
+        kind=st.selectbox('Escolha o motivo',list(TYPES),index=list(TYPES).index(s.case_kind),format_func=lambda k:TYPES[k][0],key='compact_problem_choice')
+        s.case_kind=kind
+        st.caption(TYPES[kind][1])
         st.subheader('2. Identifique sua carga')
+        def select_case_code(code):
+            s.track_code=code;s['case_code_'+kind]=code
+        phone_search(store,'new_case_phone',select_case_code)
         with st.form('new_case_'+kind):
-            code=st.text_input('Código de rastreamento',value=s.track_code,help='PP seguido de quatro números. Exemplo: PP1003.')
+            code=st.text_input('Código de rastreamento',value=s.track_code,key='case_code_'+kind,help='PP seguido de quatro números. Exemplo: PP1003.')
             st.markdown('**3. Conte mais sobre o ocorrido**')
             detail=st.text_area('Descrição (opcional)',placeholder='Ex.: Preciso saber quando minha mercadoria chegará.',max_chars=300)
             desired=st.date_input('Qual data você prefere?',value=today()+timedelta(days=1),min_value=today()) if kind=='Reagendamento' else ''
@@ -71,8 +73,11 @@ def customer_support(store,s,go,flash,choose):
                 except ValueError as e:st.warning(str(e))
     else:
         st.subheader('Acompanhe cada etapa da solução');st.caption('Informe seu código de rastreio. Se tiver o protocolo, use-o para encontrar uma solicitação específica.')
+        def select_lookup_code(code):
+            s.track_code=code;s.protocol_query=(code,'');s['lookup_code']=code;s['lookup_tid']=''
+        phone_search(store,'case_lookup_phone',select_lookup_code)
         with st.form('case_lookup'):
-            previous=s.get('protocol_query',(s.track_code,''));code=st.text_input('Código da carga',value=previous[0]);tid=st.text_input('Protocolo (opcional)',value=previous[1],placeholder='OC-XXXXXX');sub=st.form_submit_button('Consultar atendimento',type='primary',use_container_width=True)
+            previous=s.get('protocol_query',(s.track_code,''));code=st.text_input('Código da carga',value=previous[0],key='lookup_code');tid=st.text_input('Protocolo (opcional)',value=previous[1],key='lookup_tid',placeholder='OC-XXXXXX');sub=st.form_submit_button('Consultar atendimento',type='primary',use_container_width=True)
         if sub:s.protocol_query=(code,tid)
         if not s.get('protocol_query'):return
         code,tid=s.protocol_query;d=feedback(store,code,'case_help_lookup',go)
@@ -100,7 +105,7 @@ def manager_cases(store,flash):
             for col,(label,value) in zip(st.columns(2),items):col.metric(label,value)
     st.caption('Fora da meta inclui retornos tardios. O prazo medido é de primeiro retorno no ciclo atual. Tempo médio considera chamados confirmados pelo cliente.')
     if m['kinds']:st.bar_chart(pd.DataFrame.from_dict(m['kinds'],orient='index',columns=['Chamados']),horizontal=True,color='#b76b09')
-    else:st.info('Nenhuma reclamação registrada. Abra uma solicitação pelo portal ou PACO para testar.')
+    else:st.info('Nenhuma reclamação registrada. Abra uma solicitação pelo portal ou PACO para iniciar o atendimento.')
     rows=store.cases(); filter_status=st.radio('Mostrar',['Pendentes','Todos','Resolvidos'],horizontal=True);rows=[t for t in rows if filter_status=='Todos' or (filter_status=='Pendentes' and t['status'] in ACTIVE) or (filter_status=='Resolvidos' and t['status']=='Resolvido')]
     rows.sort(key=lambda t:(t['status']=='Resolvido', t['sla']!='Fora da meta',SLA[t['priority']],t['created']))
     if not rows:return

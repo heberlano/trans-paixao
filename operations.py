@@ -71,7 +71,7 @@ class Operations(Store):
         if date.fromisoformat(str(eta))<today():raise ValueError('Prazo inicial não pode estar vencido.')
         if vehicle and not any(v['id']==vehicle and v['status']!='Manutenção' for v in self.fleet()):raise ValueError('Veículo indisponível.')
         with self.connect() as c:
-            c.execute('BEGIN IMMEDIATE'); n=c.execute('SELECT MAX(CAST(SUBSTR(code,3) AS INTEGER)) FROM cargo').fetchone()[0]+1
+            c.execute('BEGIN IMMEDIATE'); used={r[0] for r in c.execute('SELECT code FROM cargo')}; n=next((n for n in range(1101,10000) if f'PP{n}' not in used),10000)
             if n>9999:raise ValueError('Limite de códigos atingido.')
             code=f'PP{n}'; ts=now(); c.execute('INSERT INTO cargo VALUES(?,?,?,?,?,?,?,?)',(code,origin,destination,origin,STATUS[0],str(eta),'',ts)); c.execute('INSERT INTO history VALUES(?,?,?)',(code,f'Cadastro · {origin}',ts))
             if vehicle:c.execute('INSERT INTO assignments VALUES(?,?)',(code,vehicle))

@@ -111,7 +111,7 @@ def demo_reply(text,store,context):
     code=context.get('code',''); d=store.get(code) if code else None
     if not d:
         if code: return f'Não encontrei a carga {code}. Confira o código e tente novamente.',None,False
-        return 'Olá! Sou o PACO. Informe seu código de rastreio (por exemplo, PP1002) para consultar a entrega ou registrar uma ocorrência.',None,False
+        return 'Olá! Sou o PACO. Informe seu código de rastreio (por exemplo, PP1002) para consultar a entrega ou registrar uma ocorrência. Se não souber o código, informe o telefone com DDD vinculado à compra, usando um número de exemplo.',None,False
     kind=None
     if re.search(r'nao recebi|nao chegou.*entregue|nao reconhe',s) and d['status']=='Entregue': kind='Entrega não reconhecida'
     elif re.search(r'priori|urgente|urgencia|agiliza',s): kind='Prioridade'
