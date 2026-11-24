@@ -12,6 +12,7 @@ from support_ui import customer_support, manager_cases, intelligence
 from lookup_ui import compact_search
 from phone_lookup import redact
 from service_bridge import select_delivery, sync_chat_delivery, open_help, registered
+from paco_window import CSS as PACO_CSS, init_window, open_window, close_window, render_window
 
 st.set_page_config(page_title='Paixão Connect | PACO',page_icon='🚚',layout='wide',initial_sidebar_state='collapsed')
 def setting(name,default=''):
@@ -21,6 +22,7 @@ key=setting('OPENAI_API_KEY'); model=setting('OPENAI_MODEL','gpt-4.1-mini'); adm
 s=st.session_state
 for k,v in {'messages':[],'context':{},'pending':None,'admin':False,'access':False,'ai_error':False,'track_code':'','track_selected':None,'nav':'Início'}.items():
     if k not in s:s[k]=v
+init_window(s)
 st.markdown('''<style>
 :root {--navy:#102b43;--orange:#f5a623;}
 .block-container{max-width:1160px;padding-top:2.8rem;padding-bottom:3rem;}
@@ -179,9 +181,13 @@ store=ResolutionStore(s.dbpath)
 store.scan_prevention()
 BRAND='''<div class="brand"><div class="brand-mark"><svg width="33" height="28" viewBox="0 0 48 36" fill="none" aria-hidden="true"><path d="M3 5h27v22H3zM30 12h9l6 8v7H30z" fill="#f5a623"/><path d="M34 15h4l4 6h-8z" fill="#102b43"/><circle cx="12" cy="28" r="5" fill="#fff" stroke="#102b43" stroke-width="2"/><circle cx="37" cy="28" r="5" fill="#fff" stroke="#102b43" stroke-width="2"/></svg></div><div><div class="brand-name">PAIXÃO <em>CONNECT</em></div><div class="brand-tag">TRANSPORTADORA PAIXÃO</div></div><div class="brand-sub">PORTAL DO CLIENTE</div></div>'''
 st.markdown(BRAND,unsafe_allow_html=True)
-PAGES=['Início','PACO','Ajuda','Serviços']
-NAV_ICONS=['home','smart_toy','support_agent','more_horiz']
+PAGES=['Início','Ajuda','Serviços']
+NAV_ICONS=['home','support_agent','more_horiz']
 def go(p,code=None,service=None):
+    if p=='PACO':
+        if code:select_delivery(s,store,code)
+        open_window(s)
+        return
     s.nav=p
     if p=='Serviços' and service is None:s.service_nav='Menu'
     if code and select_delivery(s,store,code):
@@ -197,15 +203,15 @@ def go(p,code=None,service=None):
             if s.get('pending') and s.pending.get('kind'):open_help(s,store)
             elif s.get('protocol_task')=='lookup' and s.get('protocol_query',('',''))[0]==s.context['code']:open_help(s,store,protocol=s.protocol_query[1])
             else:open_help(s,store)
-    if p=='PACO' and code and s.get('track_code')==code:s.context['code']=code
 
 def go_help(protocol=None):
     open_help(s,store,protocol=protocol)
     s.nav='Ajuda'
+    close_window(s)
 
-
+st.markdown(PACO_CSS,unsafe_allow_html=True)
 with st.container(key='navbox'):
-    for col,p,icon in zip(st.columns(4,gap='small'),PAGES,NAV_ICONS):
+    for col,p,icon in zip(st.columns(len(PAGES),gap='small'),PAGES,NAV_ICONS):
         active=s.nav==p or (p=='Início' and s.nav=='Rastreio') or (p=='Serviços' and s.nav=='Gestão')
         col.button('Mais' if p=='Serviços' else p,icon=f':material/{icon}:',key='nav_button_'+p,on_click=go,args=(p,),type='primary' if active else 'secondary',use_container_width=True)
 page=s.nav
@@ -296,6 +302,21 @@ def answer(text):
     if tid and s.context.get('code') and store.case(tid,s.context['code']):
         s.protocol_query=(s.context['code'],tid);s.protocol_task='lookup';s.help_refresh=True
 
+def confirm_paco_action(p):
+    if p.get('kind'):
+        tid,new=store.ticket(p['code'],p['kind'],'Solicitação confirmada pelo PACO.',p.get('requested_date',''),actor='PACO')
+        msg=('Recebemos sua solicitação! Protocolo ' if new else 'Já existe uma solicitação ativa: ')+tid+'. Acompanhe na Central de ajuda.'
+        registered(s,store,p['code'],tid,p['kind'])
+    else:
+        msg=confirm(store,p)
+        store.audit('PACO','Registro confirmado',p.get('code',''),p.get('action',''))
+    s.messages.append({'role':'assistant','content':msg})
+    s.pending=None
+
+# Render before page content so callbacks and reruns use the same session,
+# including on the manager login page (which uses st.stop()).
+render_window(st,s,store,answer,confirm_paco_action,go_help,sync_chat_delivery)
+
 SERVICE_ICONS={
     'avaliacao':'<path d="m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2-5.7-3-5.7 3 1.1-6.2-4.5-4.4 6.3-.9z"/>',
     'paco':'<rect x="4" y="6" width="16" height="13" rx="4"/><path d="M12 2v4M9 13h.01M15 13h.01M9 16h6M2 11v4M22 11v4"/>',
@@ -322,46 +343,6 @@ if page=='Início':
 elif page=='Rastreio':
     compact_search(store,'track_search',lambda code:go('Rastreio',code),lambda:setattr(s,'track_selected',None))
     if s.track_selected:track(s.track_selected)
-elif page=='PACO':
-    st.title('PACO')
-    st.caption('Seu assistente de entregas e atendimento.')
-    if s.ai_error:st.caption('Atendimento automático disponível enquanto a IA não responde.')
-    if not s.messages:
-        st.write('Olá! Como posso ajudar? Informe o código da carga ou um telefone de exemplo com DDD.')
-    else:
-        with st.container(height=300,border=False):
-            for m in s.messages:
-                with st.chat_message(m['role'],avatar='🚚' if m['role']=='assistant' else '👤'):st.markdown(m['content'])
-    if s.pending:
-        p=s.pending
-        desc=quote_text(p['quote']) if p.get('action')=='quote' else f"Avaliação {p['score']}/5 · {p['code']}" if p.get('action')=='rating' else f"{p['kind']} · {p['code']}"
-        st.info('Ação preparada (ainda não registrada): '+desc)
-        a,b=st.columns(2)
-        if a.button('Confirmar registro',type='primary',use_container_width=True):
-            try:
-                if p.get('kind'):
-                    tid,new=store.ticket(p['code'],p['kind'],'Solicitação confirmada pelo PACO.',p.get('requested_date',''),actor='PACO');msg=('Recebemos sua solicitação! Protocolo ' if new else 'Já existe uma solicitação ativa: ')+tid+'. Acompanhe na Central de ajuda.';registered(s,store,p['code'],tid,p['kind'])
-                else:msg=confirm(store,p);store.audit('PACO','Registro confirmado',p.get('code',''),p.get('action',''))
-                s.messages.append({'role':'assistant','content':msg});s.pending=None;st.rerun()
-            except ValueError as e:st.error(str(e))
-        if b.button('Cancelar',use_container_width=True):s.pending=None;st.rerun()
-    if s.context.get('code'):
-        st.caption('Entrega em atendimento: '+s.context['code'])
-        if s.pending and s.pending.get('kind'):
-            st.button('Continuar na Central de ajuda',key='chat_to_help_pending',on_click=go_help,use_container_width=True)
-        elif s.get('protocol_query',('', ''))[0]==s.context['code'] and s.protocol_query[1]:
-            st.button('Acompanhar meu chamado',key='chat_to_help_case',on_click=go_help,args=(s.protocol_query[1],),use_container_width=True)
-        else:
-            st.button('Abrir ou acompanhar chamado',key='chat_to_help',on_click=go_help,use_container_width=True)
-    # A normal form avoids overlap with the fixed mobile navigation.
-    with st.form('chat',clear_on_submit=True):
-        text=st.text_input('Sua mensagem',placeholder='Digite sua solicitação…',max_chars=800);submit=st.form_submit_button('Enviar ao PACO',type='primary',use_container_width=True)
-    if submit and text.strip():
-        with st.spinner('PACO consultando…'):answer(text.strip())
-        st.rerun()
-    if s.messages:
-        with st.expander('Opções da conversa'):
-            if st.button('Limpar conversa'):s.messages=[];s.context={};s.pending=None;sync_chat_delivery(s,store);st.rerun()
 elif page=='Ajuda':
     customer_support(store,s,go,flash,choose)
 elif page=='Serviços':

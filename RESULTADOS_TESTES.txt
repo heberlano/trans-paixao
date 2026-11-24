@@ -14,6 +14,15 @@ test_metrics (test_paco.PacoTests.test_metrics) ... ok
 test_refusal (test_paco.PacoTests.test_refusal) ... ok
 test_seed (test_paco.PacoTests.test_seed) ... ok
 test_tracking (test_paco.PacoTests.test_tracking) ... ok
+test_cancel_does_not_register (test_paco_window.WindowTests.test_cancel_does_not_register) ... ok
+test_clear_is_explicit (test_paco_window.WindowTests.test_clear_is_explicit) ... ok
+test_confirm_and_help_share_real_protocol (test_paco_window.WindowTests.test_confirm_and_help_share_real_protocol) ... ok
+test_initial_auto_and_responsive_launcher (test_paco_window.WindowTests.test_initial_auto_and_responsive_launcher) ... ok
+test_migrate_old_paco_page (test_paco_window.WindowTests.test_migrate_old_paco_page) ... ok
+test_minimize_and_reopen_keep_context (test_paco_window.WindowTests.test_minimize_and_reopen_keep_context) ... ok
+test_pending_avaria_handoff (test_paco_window.WindowTests.test_pending_avaria_handoff) ... ok
+test_quick_action (test_paco_window.WindowTests.test_quick_action) ... ok
+test_send_keeps_current_page_and_uses_selected_cargo (test_paco_window.WindowTests.test_send_keeps_current_page_and_uses_selected_cargo) ... ok
 test_chat_select_then_complain (test_phone_lookup.PhoneTests.test_chat_select_then_complain) ... ok
 test_combined_search_code (test_phone_lookup.PhoneTests.test_combined_search_code) ... ok
 test_combined_search_errors (test_phone_lookup.PhoneTests.test_combined_search_errors) ... ok
@@ -90,6 +99,6 @@ test_refuse (test_v2.V2Tests.test_refuse) ... ok
 test_seed_and_migration (test_v2.V2Tests.test_seed_and_migration) ... ok
 
 ----------------------------------------------------------------------
-Ran 90 tests in 3.866s
+Ran 99 tests in 4.119s
 
 OK

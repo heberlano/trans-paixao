@@ -1,6 +1,19 @@
-# Paixão Connect 3.9 — Portal do cliente
+# Paixão Connect 4.0 — PACO flutuante
 
-Equilíbrio entre o visual da versão 3.5 e a navegação compacta da 3.6. Banner curto azul-marinho com ilustração de caminhão, detalhes em laranja, busca em um campo, quatro itens no menu, central de ajuda discreta e mapa sempre visível depois da consulta. Sem balão laranja do PACO ou lista pública de exemplos.
+## Novidades 4.0
+- PACO em janela flutuante no canto inferior direito, com widgets nativos do Streamlit conectados à base e às ferramentas originais. A primeira visita abre a janela em telas com largura superior a 900 px; em telas menores, exibe apenas um botão discreto de boas-vindas em azul-marinho, que abre o atendimento ao toque. O botão permanece acessível depois de minimizar.
+- Menu com três itens: Início, Ajuda e Mais. Gestão continua como última opção de Mais. O PACO não é uma página separada; os atalhos anteriores abrem a janela na página atual. Ao seguir para a Ajuda pelo chat, a janela minimiza e preserva carga, pendência e protocolo.
+- Histórico, confirmação de ações, cancelamento, integração com as reclamações e carregamento durante consultas preservados. Em desktop amplo o layout reserva espaço ao lado do chat, e no celular a janela fica acima da barra inferior, com rolagem e botão Minimizar.
+- Nenhuma alteração no mapa, na base, nas regras de negócio, na frase de rastreamento, nas configurações de API ou nos motivos de atraso. Não há novas dependências.
+
+### Atualização rápida da versão 3.9
+1. Faça uma cópia do repositório ou mantenha o histórico do GitHub.
+2. Extraia o pacote de atualização. Substitua `app.py` e adicione `paco_window.py` na raiz do repositório, no mesmo commit. O arquivo `test_paco_window.py` é opcional para o funcionamento, mas permite reproduzir os testes. README e relatório de testes são documentação.
+3. Clique em Commit changes. Abra o endereço já publicado. Se necessário, use Reboot app no Streamlit Cloud. Não altere o `config.toml`, `requirements.txt` ou Secrets se já estiver na 3.9.
+4. Em uma aba nova no computador, confira a abertura automática. No celular, confira o botão de boas-vindas, toque para abrir e minimize. Teste PP1003, pergunte pelo prazo, registre um chamado e clique em Acompanhar meu chamado. Reabra a janela para conferir a conversa. Em Mais, Gestão deve aparecer por último. Teste o mapa de rastreamento depois de minimizar.
+
+### Validação 4.0
+90 testes anteriores e 9 novos testes automatizados de estado e interação com widgets simulados passaram. Sintaxe validada. O ambiente não dispõe do Streamlit e não conseguiu instalar a dependência, portanto os testes não executam o navegador real, a API real ou a renderização do mapa. A posição flutuante usa CSS de contêineres identificados por chave; deve ser conferida na versão publicada do Streamlit, especialmente no iPhone e em modo paisagem. O estado da janela e a conversa são preservados durante a sessão, não entre sessões independentes.
 
 ## Novidades 3.9
 - Identidade institucional própria, inspirada na organização de serviços de portais de logística: cabeçalho, banner original em SVG, busca compacta e dois atalhos funcionais para cotação e avisos. Menu inferior com quatro opções no celular. Gestão permanece ao final de Mais.
@@ -50,7 +63,7 @@ Os números são intencionalmente fictícios, não discáveis; não use dados re
 ## Limites técnicos
 - SQLite isolado por sessão; utilize a mesma aba para o fluxo cliente/gestor. Não é uma base de produção. Não há autenticação de titularidade do telefone, GPS, contatos externos, notificações em segundo plano ou persistência garantida após reinício. Fretes e SLA são estimativas de referência. Para uso comercial, implementar autenticação, controle de acesso, proteção de dados e integração de rastreio real.
 - A API é opcional e usa os Secrets existentes. Sem API, o atendimento funciona por regras. A consulta de telefone é local nos dois modos.
-- 90 testes automatizados passaram: 81 anteriores e nove novos de prazos e integração PACO/Ajuda. Sintaxe compilada. Streamlit não está instalado neste ambiente; renderização em celular e API ao vivo devem ser conferidas após publicação.
+- 99 testes automatizados passaram: 90 anteriores e nove novos da janela PACO. Sintaxe compilada. Streamlit não está instalado neste ambiente; renderização em celular e API ao vivo devem ser conferidas após publicação.
 
 ## Execução local
 `python -m pip install -r requirements.txt`
