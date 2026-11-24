@@ -1,9 +1,9 @@
 """Guided customer and manager screens for Paixão Connect 3.0."""
 from datetime import datetime, timedelta
 import streamlit as st
-from lookup_ui import phone_search
+from phone_lookup import search_delivery
 import pandas as pd
-from core import today
+from core import today, forecast_text, delay_summary
 from operations import money
 from resolution import TYPES, SLA, ACTIVE, classify
 from tracking_feedback import tracking_result
@@ -43,70 +43,166 @@ def case_card(store,t,manager=False):
             for im in images:st.image(im,width=260)
     if manager:st.markdown('**Descrição enviada pelo cliente**');st.text(t['detail'])
 
+HELP_CSS = """<style>
+.st-key-help_flow{max-width:730px;margin:0 auto;}
+.st-key-help_flow [data-testid="stVerticalBlock"]{gap:.55rem!important;}
+.help-intro{border-radius:14px;background:linear-gradient(120deg,#102b43,#235573);color:white;padding:15px 17px;}
+.help-intro small{color:#ffc66f;font-size:.67rem;font-weight:750;letter-spacing:.08em;}
+.help-intro strong{display:block;font-size:1.35rem;line-height:1.2;margin:4px 0;}
+.help-intro p{color:#e4edf5;margin:0;font-size:.85rem;}
+.st-key-help_flow [data-testid="stRadio"] [role="radiogroup"]{gap:.4rem!important;}
+.st-key-help_flow [data-testid="stRadio"] [role="radiogroup"] label{margin:0!important;padding:7px 8px;border:1px solid #dbe4ee;border-radius:9px;background:white;flex:1 1 auto;}
+.st-key-help_flow [data-testid="stRadio"] [role="radiogroup"] label:has(input:checked){background:#fff4e3;border-color:#e0aa57;}
+.st-key-help_flow [data-testid="stForm"]{padding:10px!important;}
+.st-key-help_flow [data-testid="stCaptionContainer"] p{line-height:1.35;}
+.st-key-help_search [data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:minmax(0,1fr) 84px;gap:6px!important;}
+.st-key-help_search [data-testid="stColumn"]{width:100%!important;min-width:0!important;flex:none!important;}
+</style>"""
+
+
+def lookup_help_delivery(store,s):
+    """Unified search; retain only result codes, not the phone entered."""
+    with st.container(key='help_search'):
+        with st.form('help_find_delivery',clear_on_submit=True,border=False):
+            a,b=st.columns([4,1],gap='small',vertical_alignment='bottom')
+            raw=a.text_input('Código ou telefone cadastrado com DDD',placeholder='Ex.: PP1002 ou telefone com DDD',label_visibility='collapsed',max_chars=40)
+            submitted=b.form_submit_button('Buscar',type='primary',use_container_width=True)
+        if submitted:
+            rows,title,error=search_delivery(store,raw)
+            s['help_search_matches']=[d['code'] for d in rows]
+            s['help_search_error']=(title,error) if error else None
+            if len(rows)==1:
+                choose_help_delivery(store,s,rows[0]['code']);st.rerun()
+        if s.get('help_search_error'):
+            title,error=s['help_search_error'];st.warning(f'**{title}**\n\n{error}')
+        codes=s.get('help_search_matches',[])
+        if codes:
+            st.caption('Selecione a entrega para a qual precisa de ajuda:')
+            for code in codes:
+                d=store.get(code)
+                if d:st.button(f"{code} · {d['destination']} · {d['status']}",key='help_pick_'+code,on_click=choose_help_delivery,args=(store,s,code),use_container_width=True)
+
+
+def choose_help_delivery(store,s,code):
+    if not select_delivery(s,store,code):return False
+    s['help_search_matches']=[];s['help_search_error']=None
+    # Preserve a valid existing protocol, but never carry it across deliveries.
+    current=s.get('protocol_query',('',''))
+    if current[0]!=code:s['protocol_query']=(code,'')
+    return True
+
+
+def selected_case(store,s,code,tid):
+    """Keep the selected protocol shared with PACO and reject unrelated IDs."""
+    t=store.case(tid,code)
+    if t:
+        s['protocol_query']=(code,t['id']);s.setdefault('context',{})['protocol']=t['id']
+    return t
+
+
 def customer_support(store,s,go,flash,choose):
-    st.title('Como podemos ajudar?')
-    if s.pop('help_refresh',False):
-        if s.get('protocol_task')=='new':
-            kind=s.get('case_kind','Atraso');s.compact_problem_choice=kind;s['case_code_'+kind]=s.track_code
+    st.markdown(HELP_CSS,unsafe_allow_html=True)
+    with st.container(key='help_flow'):
+        st.markdown('<div class="help-intro"><small>CENTRAL DE ATENDIMENTO</small><strong>Vamos resolver juntos.</strong><p>Conte o que aconteceu ou acompanhe uma solicitação.</p></div>',unsafe_allow_html=True)
+        if s.pop('help_refresh',False):
+            if s.get('case_kind') in TYPES:s['help_kind_v41']=s['case_kind']
+            s['help_action_v41']=s.get('protocol_task','new')
+        if s.get('protocol_task') not in ('new','lookup'):s['protocol_task']='new'
+        if s.get('help_action_v41')!=s['protocol_task']:s['help_action_v41']=s['protocol_task']
+        def task_changed():s['protocol_task']=s['help_action_v41']
+        task=st.radio('O que você precisa?', ['new','lookup'],format_func=lambda x:'Resolver um problema' if x=='new' else 'Acompanhar chamado',horizontal=True,key='help_action_v41',on_change=task_changed,label_visibility='collapsed')
+        st.markdown('**1 · Localize sua entrega**')
+        d=store.get(s.get('track_code','')) if s.get('track_code') else None
+        if d:
+            with st.container(border=True):
+                st.markdown(f"**{d['code']} · {d['status']}**")
+                st.caption(f"{d['origin']} → {d['destination']} · {d['stage_label']}")
+                forecast=forecast_text(d)
+                if forecast:st.caption(forecast)
+            with st.expander('Trocar de entrega',expanded=bool(s.get('help_search_matches') or s.get('help_search_error'))):
+                lookup_help_delivery(store,s)
         else:
-            s.lookup_code,s.lookup_tid=s.get('protocol_query',(s.track_code,''))
-    if s.get('track_code'):
-        st.caption('Entrega em atendimento: '+s.track_code)
-        st.button('Conversar com PACO sobre esta entrega',key='support_chat',on_click=go,args=('PACO',s.track_code),use_container_width=True)
-    task=choose('protocol_task',[('new','Tenho um problema','support_agent'),('lookup','Acompanhar solução','search')],'protocol_menu')
-    if task=='new':
-        if s.get('case_kind') not in TYPES:s.case_kind='Atraso'
-        kind=st.selectbox('O que aconteceu com sua entrega?',list(TYPES),index=list(TYPES).index(s.case_kind),format_func=lambda k:TYPES[k][0],key='compact_problem_choice')
-        s.case_kind=kind
-        st.caption(TYPES[kind][1])
-        st.markdown('**Identifique sua carga**')
-        def select_case_code(code):
-            select_delivery(s,store,code);s['case_code_'+kind]=code
-        phone_search(store,'new_case_phone',select_case_code)
-        with st.form('new_case_'+kind):
-            code=st.text_input('Código de rastreamento',value=s.track_code,key='case_code_'+kind,help='PP seguido de quatro números. Exemplo: PP1003.')
-            detail=st.text_area('Conte mais (opcional)',placeholder='Descreva o ocorrido, se desejar.',max_chars=300,height=80)
-            pending=s.get('pending') or {}
-            preferred=today()+timedelta(days=1)
-            if kind=='Reagendamento' and pending.get('code')==s.track_code and pending.get('requested_date'):
-                preferred=max(today(),datetime.fromisoformat(pending['requested_date']).date())
-            desired=st.date_input('Qual data você prefere?',value=preferred,min_value=today()) if kind=='Reagendamento' else ''
-            files=st.file_uploader('Fotos da embalagem ou produto (opcional)',type=['jpg','jpeg','png','webp'],accept_multiple_files=True,help='Até 3 imagens, cada uma com no máximo 5 MB. Use fotos fictícias, sem pessoas, etiquetas ou dados pessoais.') if kind=='Avaria' else []
-            st.caption('Encaminharemos sua solicitação para análise.')
-            ok=st.checkbox('Confirmo o registro desta solicitação');submit=st.form_submit_button('Registrar e acompanhar',type='primary',use_container_width=True)
-        if submit:
-            d=feedback(store,code,'case_help_new',go)
-            if d and not ok:st.warning('Marque a confirmação acima para que possamos registrar sua solicitação.')
-            elif d:
+            st.caption('Informe seu código de rastreamento (ex.: PP1002) ou o telefone cadastrado com DDD.')
+            lookup_help_delivery(store,s)
+            st.caption('Se preferir, o PACO também pode ajudar a localizar sua carga.')
+            return
+        code=d['code']
+        if task=='new':
+            st.markdown('**2 · O que aconteceu?**')
+            if s.get('case_kind') not in TYPES:s['case_kind']='Atraso' if d['status']=='Atrasada' else 'Reclamação'
+            if s.get('help_kind_v41') not in TYPES:s['help_kind_v41']=s['case_kind']
+            kind=st.selectbox('Selecione o problema',list(TYPES),format_func=lambda k:TYPES[k][0],key='help_kind_v41',label_visibility='collapsed')
+            s['case_kind']=kind
+            st.caption(TYPES[kind][1])
+            if kind=='Atraso' and d['status']=='Atrasada':
+                st.caption(f"Motivo registrado: {d['reason']}. {delay_summary(d)}.")
+            active=[t for t in store.cargo_tickets(code) if t['kind']==kind and t['status'] in ACTIVE]
+            if active:
+                existing=active[0]['id']
+                st.info('Já existe um chamado em andamento para esse problema. Não é necessário abrir outro.')
+                def follow():
+                    selected_case(store,s,code,existing);s['protocol_task']='lookup';s['help_refresh']=True
+                st.button('Acompanhar chamado '+existing,key='help_existing',on_click=follow,type='primary',use_container_width=True)
+                return
+            st.markdown('**3 · Envie sua solicitação**')
+            with st.form('help_new_'+code+'_'+kind,border=False):
+                detail=st.text_area('Conte mais (opcional)',placeholder='Se desejar, descreva o que ocorreu.',max_chars=300,height=80)
+                pending=s.get('pending') or {};preferred=today()+timedelta(days=1)
+                if kind=='Reagendamento' and pending.get('code')==code and pending.get('requested_date'):
+                    preferred=max(today(),datetime.fromisoformat(pending['requested_date']).date())
+                desired=st.date_input('Data desejada',value=preferred,min_value=today()) if kind=='Reagendamento' else ''
+                files=st.file_uploader('Anexar fotos (opcional)',type=['jpg','jpeg','png','webp'],accept_multiple_files=True,help='Até 3 imagens de 5 MB. Não envie dados pessoais.') if kind=='Avaria' else []
+                st.caption('Ao registrar, você confirma o envio à equipe responsável. Acompanhe a resposta pelo protocolo.')
+                submit=st.form_submit_button('Confirmar e registrar chamado',type='primary',use_container_width=True)
+            if submit:
                 try:
                     if len(files)>3 or any(f.size>5*1024*1024 for f in files):raise ValueError('Envie até três imagens de 5 MB cada.')
-                    tid,new=store.ticket(d['code'],kind,detail or 'Solicitação pelo portal.',str(desired),[f.getvalue() for f in files]);registered(s,store,d['code'],tid,kind);s.messages.append({'role':'assistant','content':f'Chamado {tid} · {kind} · carga {d["code"]}. Você pode consultar o andamento aqui ou na Central de ajuda.'});flash(('Recebemos sua solicitação! Acompanhe as próximas etapas: ' if new else 'Já existe uma solicitação ativa para este problema. Vamos mostrar o andamento: ')+tid)
+                    tid,new=store.ticket(code,kind,detail or 'Solicitação pelo portal.',str(desired),[f.getvalue() for f in files]);registered(s,store,code,tid,kind)
+                    s.messages.append({'role':'assistant','content':f'Chamado {tid} · {kind} · carga {code}. Você pode acompanhar o andamento aqui ou na Central de ajuda.'})
+                    flash(('Recebemos sua solicitação! Protocolo: ' if new else 'Já existe uma solicitação ativa. Protocolo: ')+tid)
                 except ValueError as e:st.warning(str(e))
-    else:
-        st.caption('Informe o código da carga ou consulte pelo telefone. O protocolo é opcional.')
-        def select_lookup_code(code):
-            select_delivery(s,store,code);s.protocol_query=(code,'');s['lookup_code']=code;s['lookup_tid']=''
-        phone_search(store,'case_lookup_phone',select_lookup_code)
-        with st.form('case_lookup'):
-            previous=s.get('protocol_query',(s.track_code,''));code=st.text_input('Código da carga',value=previous[0],key='lookup_code');tid=st.text_input('Protocolo (opcional)',value=previous[1],key='lookup_tid',placeholder='OC-XXXXXX');sub=st.form_submit_button('Consultar atendimento',type='primary',use_container_width=True)
-        if sub:s.protocol_query=(code,tid)
-        if not s.get('protocol_query'):return
-        code,tid=s.protocol_query;d=feedback(store,code,'case_help_lookup',go)
-        if not d:return
-        select_delivery(s,store,d['code'])
-        if tid and store.case(tid,d['code']):s.context['protocol']=tid.upper()
-        cases=[store.case(tid,d['code'])] if tid.strip() else [x for x in store.cases() if x['code']==d['code']];cases=[x for x in cases if x]
-        if not cases:st.info('Ainda não encontramos chamados nessa consulta. Confira os códigos ou selecione Tenho um problema para registrar uma solicitação.');return
-        for t in cases:
+        else:
+            st.markdown('**2 · Acompanhe seu chamado**')
+            cases=[t for t in store.cases() if t['code']==code]
+            if not cases:
+                st.info('Não encontramos chamados para esta entrega. Se algo não saiu como esperado, selecione Resolver um problema acima.')
+                return
+            ids=[t['id'] for t in cases];target=s.get('protocol_query',('',''))[1];widget='help_case_v41_'+code
+            if s.get(widget) not in ids or (target in ids and s.get(widget)!=target):s[widget]=target if target in ids else ids[0]
+            def protocol_changed():selected_case(store,s,code,s[widget])
+            if len(cases)>1:
+                tid=st.selectbox('Escolha o chamado',ids,format_func=lambda x:next(f"{t['kind']} · {t['status']} · {x}" for t in cases if t['id']==x),key=widget,on_change=protocol_changed)
+            else:tid=ids[0]
+            t=selected_case(store,s,code,tid)
+            if not t:return
             with st.container(border=True):
-                case_card(store,t)
+                st.markdown(f"**{t['kind']} · {t['status']}**")
+                st.caption(f"Protocolo {t['id']} · Aberto em {fmt(t['created'])}")
+                if t['status']=='Resolvido':st.success('Seu atendimento está encerrado. Obrigado pela confiança!' if t['rating'] is not None else 'Atendimento encerrado no sistema.')
+                elif t['status']=='Aguardando confirmação':st.info('Temos uma proposta de solução. Confira abaixo e diga se ela resolveu o problema.')
+                else:
+                    st.write({'Aberto':'Recebemos sua solicitação. Nossa equipe vai analisar o caso.','Em análise':'Nossa equipe está verificando o ocorrido.','Reaberto':'Vamos analisar novamente sua solicitação.'}.get(t['status'],t['status']))
+                if t['solution']:st.markdown('**Última atualização**');st.text(t['solution'])
+                if t['requested_date']:st.caption('Data solicitada: '+fmt(t['requested_date']))
+                if t['proposed_date']:st.write('Nova data proposta: '+fmt(t['proposed_date'])+' (aguardando confirmação).')
+                if t['status'] in ('Aberto','Em análise','Reaberto') and not t['first_reply']:
+                    st.caption('Previsão de primeiro retorno: '+fmt(t['deadline'])+' (meta, não garantia de solução).')
+                    if t['sla']=='Fora da meta':st.warning('A meta de retorno foi ultrapassada. O caso está sinalizado para revisão.')
+                with st.expander('Histórico e detalhes'):
+                    st.caption(f"Prioridade: {t['priority']} · Setor: {t['owner']} · {t['sla']}")
+                    for e in store.events(tid,code):
+                        st.markdown('**'+e['event']+'**');st.caption(fmt(e['created'])+' · '+e['actor']);st.text(e['detail'])
+                    for im in store.photos(tid,code):st.image(im,width=260)
                 if t['status']=='Aguardando confirmação':
-                    st.subheader('A solução atende à sua necessidade?')
-                    with st.form('decision_'+t['id']):
-                        decision=st.radio('Escolha uma opção',['Sim, está resolvido','Ainda preciso de ajuda']);score=st.select_slider('Nota para o atendimento (se resolvido)',options=[1,2,3,4,5],value=5);note=st.text_area('O que ainda precisamos resolver? (se não resolvido)',max_chars=300);sub=st.form_submit_button('Enviar minha resposta',type='primary')
+                    st.markdown('**A solução resolveu seu problema?**')
+                    decision=st.radio('Resultado',['Sim, foi resolvido','Ainda preciso de ajuda'],key='help_decision_'+tid,label_visibility='collapsed')
+                    accept=decision.startswith('Sim')
+                    with st.form('help_decision_form_'+tid,border=False):
+                        score=st.select_slider('Como avalia o atendimento?',options=[1,2,3,4,5],value=5) if accept else 5
+                        note=st.text_area('O que ainda precisamos resolver?',max_chars=300) if not accept else ''
+                        sub=st.form_submit_button('Confirmar resolução' if accept else 'Reabrir chamado',type='primary',use_container_width=True)
                     if sub:
-                        try:
-                            accept=decision.startswith('Sim');store.customer_decision(t['id'],d['code'],accept,score,note);flash('Agradecemos sua confirmação e avaliação!' if accept else 'Sentimos muito. Seu chamado foi reaberto para nova análise.')
+                        try:store.customer_decision(tid,code,accept,score,note);flash('Agradecemos sua confirmação e avaliação!' if accept else 'Sentimos muito. Seu chamado foi reaberto para nova análise.')
                         except ValueError as e:st.warning(str(e))
                 elif t['rating']:st.caption(f'Você avaliou o atendimento com {t["rating"]}/5. Obrigado!')
 

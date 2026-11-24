@@ -5,6 +5,16 @@ test_confirmation_precedence_and_original (test_forecast.ForecastTests.test_conf
 test_delivered_no_prediction (test_forecast.ForecastTests.test_delivered_no_prediction) ... ok
 test_expired_confirmed_and_estimate (test_forecast.ForecastTests.test_expired_confirmed_and_estimate) ... ok
 test_phone_generated_and_stable (test_forecast.ForecastTests.test_phone_generated_and_stable) ... ok
+test_accept_from_help (test_help_ui.HelpTests.test_accept_from_help) ... ok
+test_code_search_and_shared_context (test_help_ui.HelpTests.test_code_search_and_shared_context) ... ok
+test_create_and_follow_single_action (test_help_ui.HelpTests.test_create_and_follow_single_action) ... ok
+test_duplicate_offers_existing_ticket (test_help_ui.HelpTests.test_duplicate_offers_existing_ticket) ... ok
+test_first_screen_only_search (test_help_ui.HelpTests.test_first_screen_only_search) ... ok
+test_invalid_code_message (test_help_ui.HelpTests.test_invalid_code_message) ... ok
+test_pending_avaria_from_chat (test_help_ui.HelpTests.test_pending_avaria_from_chat) ... ok
+test_phone_choice (test_help_ui.HelpTests.test_phone_choice) ... ok
+test_reopen_from_help (test_help_ui.HelpTests.test_reopen_from_help) ... ok
+test_switch_delivery_drops_unrelated_protocol (test_help_ui.HelpTests.test_switch_delivery_drops_unrelated_protocol) ... ok
 test_ai_scope_mock (test_paco.PacoTests.test_ai_scope_mock) ... ok
 test_ai_tools_mock (test_paco.PacoTests.test_ai_tools_mock) ... ok
 test_confirmation_and_duplicate (test_paco.PacoTests.test_confirmation_and_duplicate) ... ok
@@ -17,11 +27,13 @@ test_tracking (test_paco.PacoTests.test_tracking) ... ok
 test_cancel_does_not_register (test_paco_window.WindowTests.test_cancel_does_not_register) ... ok
 test_clear_is_explicit (test_paco_window.WindowTests.test_clear_is_explicit) ... ok
 test_confirm_and_help_share_real_protocol (test_paco_window.WindowTests.test_confirm_and_help_share_real_protocol) ... ok
-test_initial_auto_and_responsive_launcher (test_paco_window.WindowTests.test_initial_auto_and_responsive_launcher) ... ok
+test_initial_closed_and_explicit_launcher (test_paco_window.WindowTests.test_initial_closed_and_explicit_launcher) ... ok
+test_legacy_auto_migrates_closed (test_paco_window.WindowTests.test_legacy_auto_migrates_closed) ... ok
 test_migrate_old_paco_page (test_paco_window.WindowTests.test_migrate_old_paco_page) ... ok
 test_minimize_and_reopen_keep_context (test_paco_window.WindowTests.test_minimize_and_reopen_keep_context) ... ok
 test_pending_avaria_handoff (test_paco_window.WindowTests.test_pending_avaria_handoff) ... ok
 test_quick_action (test_paco_window.WindowTests.test_quick_action) ... ok
+test_reject_long_message_without_calling_agent (test_paco_window.WindowTests.test_reject_long_message_without_calling_agent) ... ok
 test_send_keeps_current_page_and_uses_selected_cargo (test_paco_window.WindowTests.test_send_keeps_current_page_and_uses_selected_cargo) ... ok
 test_chat_select_then_complain (test_phone_lookup.PhoneTests.test_chat_select_then_complain) ... ok
 test_combined_search_code (test_phone_lookup.PhoneTests.test_combined_search_code) ... ok
@@ -99,6 +111,6 @@ test_refuse (test_v2.V2Tests.test_refuse) ... ok
 test_seed_and_migration (test_v2.V2Tests.test_seed_and_migration) ... ok
 
 ----------------------------------------------------------------------
-Ran 99 tests in 4.119s
+Ran 111 tests in 4.776s
 
 OK

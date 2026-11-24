@@ -198,6 +198,7 @@ def go(p,code=None,service=None):
     if service:s.service_nav=service
     if p=='Ajuda' or service=='Protocolos':
         s.nav='Ajuda'
+        close_window(s)
         if code or service=='Protocolos':open_help(s,store,code)
         elif s.get('context',{}).get('code'):
             if s.get('pending') and s.pending.get('kind'):open_help(s,store)

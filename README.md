@@ -1,3 +1,24 @@
+# Paixão Connect 4.1 — PACO discreto e Ajuda guiada
+
+## Atualização da versão 4.0
+- PACO fechado por padrão em todas as telas. O botão azul-marinho abre a janela compacta sem alterar a largura do portal. Minimizar preserva a conversa, a carga e o protocolo. Atalhos iniciais: Rastrear, Atraso, Avaria. O envio usa um botão de seta; o campo não exibe o contador de caracteres. Limite de 800 caracteres validado no envio.
+- O chat abre sobre o site no computador e como painel compacto acima do menu no celular. A navegação para Ajuda minimiza o chat, sem perder os dados.
+- Ajuda: escolha resolver ou acompanhar; localize a entrega com código ou telefone; selecione o motivo e confirme o envio. A busca aceita os mesmos telefones fictícios e códigos do rastreamento. A entrega atual é reaproveitada; é possível trocar de carga. Se já houver um chamado ativo para o mesmo motivo, o usuário recebe um atalho para acompanhá-lo. O protocolo selecionado fica disponível no PACO. Fotos, reagendamento, avaliação, confirmação e reabertura permanecem disponíveis quando aplicáveis.
+- O controle Manage app pertence ao Streamlit Community Cloud. Aplicado CSS para ocultar elementos conhecidos da hospedagem quando estão dentro do documento e margem inferior de segurança no desktop. Não há garantia de ocultação se o controle estiver no shell externo da hospedagem. Teste também em aba anônima, sem login de proprietário. A administração continua acessível em share.streamlit.io.
+- Mapas, previsão de entrega, base de dados, motivos engraçados, fretes, avaliações e gestão preservados. Gestão continua como última opção do menu Mais. Nenhuma alteração nos Secrets, dependências ou config.toml.
+
+## Como atualizar
+1. Extraia o ZIP de atualização rápida e substitua `app.py`, `paco_window.py` e `support_ui.py` na raiz do repositório, em um único commit. Os testes e README são opcionais para executar o aplicativo.
+2. Clique em Commit changes. Abra o mesmo endereço do site. Se necessário, reinicie pelo painel Streamlit Cloud.
+3. Em aba nova, confira que o PACO começa fechado e que abrir/minimizar não reduz a largura. Consulte PP1003; confira o mapa, depois abra PACO e pergunte a previsão sem repetir o código. Prepare uma reclamação, continue na Ajuda e confirme. Consulte o mesmo chamado e verifique que o sistema evita duplicação.
+4. Na Ajuda, teste um telefone fictício com DDD, selecione uma entrega, escolha Avaria e verifique que o campo de fotos aparece. Teste um chamado com solução proposta e sua confirmação ou reabertura. Confira também no celular.
+
+## Validação 4.1
+111 testes automatizados passaram (99 anteriores, com a expectativa de abertura atualizada, e 12 adicionais). Os novos testes utilizam widgets simulados e SQLite, sem Streamlit real. A sintaxe foi compilada. Não foi possível renderizar a interface no navegador real ou executar a API; o posicionamento e a ocultação de elementos do Streamlit Cloud devem ser conferidos após a publicação. A busca por telefone continua simulada e não é autenticação de titularidade.
+
+---
+
+## Histórico de versões
 # Paixão Connect 4.0 — PACO flutuante
 
 ## Novidades 4.0

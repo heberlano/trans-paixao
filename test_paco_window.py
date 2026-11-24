@@ -25,7 +25,7 @@ class FakeUI:
     def callback(self,key):
         fn,args=self.buttons[key];fn(*args)
     def markdown(self,text,**kwargs):self.output.append(text)
-    caption=markdown;info=markdown;error=markdown
+    caption=markdown;info=markdown;error=markdown;warning=markdown
     def chat_message(self,*args,**kwargs):return self
     def spinner(self,*args,**kwargs):return self
     def expander(self,*args,**kwargs):return self
@@ -41,6 +41,7 @@ class WindowTests(unittest.TestCase):
         self.store=ResolutionStore(str(Path(self.tmp.name)/'data.sqlite'))
         self.state={'nav':'Início','context':{},'messages':[],'pending':None}
         init_window(self.state)
+        open_window(self.state)
     def tearDown(self):self.tmp.cleanup()
     def answer(self,text):
         msg,pending,_=complaint_reply(text,self.store,self.state['context'])
@@ -61,9 +62,15 @@ class WindowTests(unittest.TestCase):
             with self.assertRaises(Rerun):render_window(ui,self.state,self.store,self.answer,self.confirm,self.help,sync_chat_delivery)
         else:render_window(ui,self.state,self.store,self.answer,self.confirm,self.help,sync_chat_delivery)
         return ui
-    def test_initial_auto_and_responsive_launcher(self):
-        ui=self.draw();self.assertIn('paco_panel_auto',ui.containers);self.assertIn('paco_launcher_auto',ui.containers)
-        self.assertIn('paco_suggestion_0',ui.buttons)
+    def test_initial_closed_and_explicit_launcher(self):
+        self.state.pop('paco_window');init_window(self.state)
+        ui=self.draw();self.assertEqual(self.state['paco_window'],'closed');self.assertNotIn('paco_panel_open',ui.containers);self.assertIn('paco_launcher_closed',ui.containers)
+        self.assertNotIn('paco_suggestion_0',ui.buttons)
+        ui.callback('paco_open_button');self.assertIn('paco_suggestion_0',self.draw().buttons)
+    def test_legacy_auto_migrates_closed(self):
+        self.state['paco_window']='auto';init_window(self.state);self.assertEqual(self.state['paco_window'],'closed')
+    def test_reject_long_message_without_calling_agent(self):
+        ui=self.draw('submit','x'*801);self.assertEqual(self.state['messages'],[]);self.assertTrue(any('800 caracteres' in x for x in ui.output))
     def test_migrate_old_paco_page(self):
         self.state['nav']='PACO';init_window(self.state)
         self.assertEqual(self.state['nav'],'Início');self.assertEqual(self.state['paco_window'],'open')
